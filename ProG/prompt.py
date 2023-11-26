@@ -6,7 +6,7 @@ import warnings
 from deprecated.sphinx import deprecated
 from sklearn.cluster import KMeans
 from GNN.model import GNN
-
+from torch_geometric.nn.inits import glorot
 
 class LightPrompt(torch.nn.Module):
     def __init__(self, token_dim, token_num_per_group, group_num=1, inner_prune=None):
