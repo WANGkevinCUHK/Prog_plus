@@ -214,9 +214,9 @@ class GPPTPrompt(torch.nn.Module):
                 pro=param
         return pro
         
-class SimplePrompt(nn.Module):
+class GPF(torch.nn.Module):
     def __init__(self, in_channels: int):
-        super(SimplePrompt, self).__init__()
+        super(GPF, self).__init__()
         self.global_emb = nn.Parameter(torch.Tensor(1, in_channels))
         self.reset_parameters()
 
@@ -227,9 +227,9 @@ class SimplePrompt(nn.Module):
         return x + self.global_emb
 
 
-class GPFplusAtt(nn.Module):
+class GPF_plus(torch.nn.Module):
     def __init__(self, in_channels: int, p_num: int):
-        super(GPFplusAtt, self).__init__()
+        super(GPF_plus, self).__init__()
         self.p_list = nn.Parameter(torch.Tensor(p_num, in_channels))
         self.a = nn.Linear(in_channels, p_num)
         self.reset_parameters()
