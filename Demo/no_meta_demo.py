@@ -6,7 +6,7 @@ from ProG import PreTrain
 from ProG.utils import mkdir, load_data4pretrain
 from ProG.prompt import GNN, LightPrompt, HeavyPrompt
 from torch import nn, optim
-from ProG.data import multi_class_NIG
+from ProG.Data import multi_class_NIG
 import torch
 from torch_geometric.loader import DataLoader
 from ProG.eva import acc_f1_over_batches
@@ -80,6 +80,37 @@ def pretrain():
              aug1='dropN', aug2="permE", aug_ratio=None,
              lr=0.01, decay=0.0001, epochs=100)
 
+def train_one_outer_epoch(epoch, train_loader, opi, lossfn, gnn, PG, answering):
+    for j in range(1, epoch + 1):
+        running_loss = 0.
+        # bar2=tqdm(enumerate(train_loader))
+        for batch_id, train_batch in enumerate(train_loader):  # bar2
+            # print(train_batch)
+            train_batch = train_batch.to(device)
+            prompted_graph = PG(train_batch)
+            # print(prompted_graph)
+
+            graph_emb = gnn(prompted_graph.x, prompted_graph.edge_index, prompted_graph.batch)
+            # print(graph_emb)
+            pre = answering(graph_emb)
+            # print(pre)
+            train_loss = lossfn(pre, train_batch.y)
+            # print('\t\t==> answer_epoch {}/{} | batch {} | loss: {:.8f}'.format(j, answer_epoch, batch_id,
+            #                                                                     train_loss.item()))
+
+            opi.zero_grad()
+            train_loss.backward()
+            opi.step()
+            running_loss += train_loss.item()
+
+            if batch_id % 5 == 4:  # report every 5 updates
+                last_loss = running_loss / 5  # loss per batch
+                # bar2.set_description('answer_epoch {}/{} | batch {} | loss: {:.8f}'.format(j, answer_epoch, batch_id,
+                #                                                                     last_loss))
+                print(
+                    'epoch {}/{} | batch {}/{} | loss: {:.8f}'.format(j, epoch, batch_id, len(train_loader), last_loss))
+
+                running_loss = 0.
 
 def prompt_w_o_h(dataname="CiteSeer", gnn_type="TransformerConv", num_class=6, task_type='multi_class_classification'):
     _, _, train_list, test_list = multi_class_NIG(dataname, num_class, shots=100)
@@ -135,40 +166,6 @@ def prompt_w_o_h(dataname="CiteSeer", gnn_type="TransformerConv", num_class=6, t
             PG.train()
             PG = PG.to(device)
             gnn = gnn.to(device) 
-
-
-def train_one_outer_epoch(epoch, train_loader, opi, lossfn, gnn, PG, answering):
-    for j in range(1, epoch + 1):
-        running_loss = 0.
-        # bar2=tqdm(enumerate(train_loader))
-        for batch_id, train_batch in enumerate(train_loader):  # bar2
-            # print(train_batch)
-            train_batch = train_batch.to(device)
-            prompted_graph = PG(train_batch)
-            # print(prompted_graph)
-
-            graph_emb = gnn(prompted_graph.x, prompted_graph.edge_index, prompted_graph.batch)
-            # print(graph_emb)
-            pre = answering(graph_emb)
-            # print(pre)
-            train_loss = lossfn(pre, train_batch.y)
-            # print('\t\t==> answer_epoch {}/{} | batch {} | loss: {:.8f}'.format(j, answer_epoch, batch_id,
-            #                                                                     train_loss.item()))
-
-            opi.zero_grad()
-            train_loss.backward()
-            opi.step()
-            running_loss += train_loss.item()
-
-            if batch_id % 5 == 4:  # report every 5 updates
-                last_loss = running_loss / 5  # loss per batch
-                # bar2.set_description('answer_epoch {}/{} | batch {} | loss: {:.8f}'.format(j, answer_epoch, batch_id,
-                #                                                                     last_loss))
-                print(
-                    'epoch {}/{} | batch {}/{} | loss: {:.8f}'.format(j, epoch, batch_id, len(train_loader), last_loss))
-
-                running_loss = 0.
-
 
 def prompt_w_h(dataname="CiteSeer", gnn_type="TransformerConv", num_class=6, task_type='multi_class_classification'):
     _, _, train_list, test_list = multi_class_NIG(dataname, num_class, shots=100)

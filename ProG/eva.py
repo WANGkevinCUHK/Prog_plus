@@ -2,7 +2,8 @@ import torch
 import numpy as np
 import torchmetrics
 import warnings
-
+import sklearn.linear_model as lm
+import sklearn.metrics as skm
 
 class Evaluator:
     def __init__(self, eval_metric='hits@50'):
@@ -228,3 +229,28 @@ def acc_f1_over_batches(test_loader, PG, gnn, answering, num_class, task_type, d
         answering = answering.to(device)
     gnn = gnn.to(device)
     
+
+
+def compute_acc_unsupervised(emb, labels, train_nids, val_nids, test_nids):
+    """
+    Compute the accuracy of prediction given the labels.
+    """
+    emb = emb.cpu().numpy()
+    labels = labels.cpu().numpy()
+    train_nids = train_nids.cpu().numpy()
+    train_labels = labels[train_nids]
+    val_nids = val_nids.cpu().numpy()
+    val_labels = labels[val_nids]
+    test_nids = test_nids.cpu().numpy()
+    test_labels = labels[test_nids]
+
+    emb = (emb - emb.mean(0, keepdims=True)) / emb.std(0, keepdims=True)
+
+    lr = lm.LogisticRegression(multi_class='multinomial', max_iter=10000)
+    lr.fit(emb[train_nids], train_labels)
+
+    pred = lr.predict(emb)
+    f1_micro_eval = skm.f1_score(val_labels, pred[val_nids], average='micro')
+    f1_micro_test = skm.f1_score(test_labels, pred[test_nids], average='micro')
+    return f1_micro_eval, f1_micro_test
+

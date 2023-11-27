@@ -5,7 +5,7 @@ from utils import act
 import warnings
 from deprecated.sphinx import deprecated
 from sklearn.cluster import KMeans
-from GNN.model import GNN
+from Model.model import GNN
 from torch_geometric.nn.inits import glorot
 
 class LightPrompt(torch.nn.Module):
@@ -217,13 +217,13 @@ class GPPTPrompt(torch.nn.Module):
 class GPF(torch.nn.Module):
     def __init__(self, in_channels: int):
         super(GPF, self).__init__()
-        self.global_emb = nn.Parameter(torch.Tensor(1, in_channels))
+        self.global_emb = torch.nn.Parameter(torch.Tensor(1, in_channels))
         self.reset_parameters()
 
     def reset_parameters(self):
         glorot(self.global_emb)
 
-    def add(self, x: Tensor):
+    def add(self, x: torch.Tensor):
         return x + self.global_emb
 
 
@@ -238,7 +238,7 @@ class GPF_plus(torch.nn.Module):
         glorot(self.p_list)
         self.a.reset_parameters()
 
-    def add(self, x: Tensor):
+    def add(self, x: torch.Tensor):
         score = self.a(x)
         # weight = torch.exp(score) / torch.sum(torch.exp(score), dim=1).view(-1, 1)
         weight = F.softmax(score, dim=1)
@@ -276,6 +276,7 @@ class GPrompt(torch.nn.modules):
 
     def Forward():
         pass
+    
 class Gprompt_layer_mean(GPrompt):
     def __init__(self):
         super(Gprompt_layer_mean, self).__init__()
