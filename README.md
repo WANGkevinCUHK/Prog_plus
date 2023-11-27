@@ -22,6 +22,12 @@ or
 ## Pre-trained model
 
 ## Backbone mode
+
+- GAT
+- GCN
+- GraphTransformer
+- GraphSage
+  
 ## Prompting methods
 
 - LightPrompt(All in one)
@@ -30,7 +36,7 @@ or
 - GPFPrompt
 - GPF_plusPrompt
 - GPrompt
-- 
+  
 ## Citation
 
 bibtex
