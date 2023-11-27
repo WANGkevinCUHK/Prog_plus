@@ -1,7 +1,7 @@
 It is an improvement of project [[Prog](https://github.com/sheldonresearch/ProG )] of Sun,thanks to Sun！
 
 <p align="center">
-  <img height="150" src="/Pipeline.png?sanitize=true" />
+  <img height="300" src="/Pipeline.png?sanitize=true" />
 </p>
 ## Package Dependencies
 
