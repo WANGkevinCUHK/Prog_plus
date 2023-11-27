@@ -6,7 +6,7 @@ from ProG import PreTrain
 from ProG.utils import mkdir, load_data4pretrain
 from ProG.prompt import GNN, LightPrompt, HeavyPrompt
 from torch import nn, optim
-from ProG.Data import multi_class_NIG
+from ProG.Data.data import multi_class_NIG
 import torch
 from torch_geometric.loader import DataLoader
 from ProG.eva import acc_f1_over_batches

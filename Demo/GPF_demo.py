@@ -1,8 +1,8 @@
 import argparse
 
-from ProG.Data.loader import BioDataset
-from ProG.Data.dataloader import DataLoaderFinetune
-from ProG.Data.data_preprocess import random_split, species_split, random_split_abs_value
+from ..ProG.Data.loader import BioDataset
+from ..ProG.Data.dataloader import DataLoaderFinetune
+from ..ProG.Data.data_preprocess import random_split, species_split, random_split_abs_value
 
 import torch
 import torch.nn as nn
@@ -12,7 +12,7 @@ import torch.optim as optim
 from tqdm import tqdm
 import numpy as np
 
-from ProG.Model.model import GNN, GNN_graphpred
+from ProG.Model.model import GNN_graphpred
 from sklearn.metrics import roc_auc_score
 from ProG.prompt import GPF as Prompt
 import pandas as pd

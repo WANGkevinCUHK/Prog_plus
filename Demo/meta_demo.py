@@ -5,7 +5,7 @@ from ProG.utils import seed, seed_everything
 from random import shuffle
 from ProG.meta import MAML
 from ProG.eva import acc_f1_over_batches
-from data_preprocess import load_tasks
+from ProG.Data.data_preprocess import load_tasks
 from torch_geometric.loader import DataLoader
 
 seed_everything(seed)
