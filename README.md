@@ -20,7 +20,17 @@ or
 ``conda install pyg -c pyg``
 
 
+## Pre-trained model
 
+## Backbone mode
+## Prompting methods
+
+-LightPrompt(All in one)
+-HeavyPrompt(All in one)
+-GPPTPrompt
+-GPFPrompt
+-GPF_plusPrompt
+-GPrompt
 ## Citation
 
 bibtex
