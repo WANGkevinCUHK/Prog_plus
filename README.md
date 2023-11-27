@@ -2,10 +2,10 @@ It is an improvement of project [[Prog](https://github.com/sheldonresearch/ProG 
 
 
 ## Package Dependencies
--cuda 11.8
--python 3.9.17 
--pytorch 2.0.1 
--torch-geometric 2.3.1
+--cuda 11.8
+--python 3.9.17 
+--pytorch 2.0.1 
+--torch-geometric 2.3.1
 [[quick start](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html )]
 
 
