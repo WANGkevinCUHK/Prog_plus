@@ -1,4 +1,33 @@
-It is an improvement of project [[Prog](https://github.com/sheldonresearch/ProG )] of Sun,thanks to Sun！
+<h1 align='left'>
+ProG Plus
+</h1>
+
+
+<h5 align="left">
+
+![](https://img.shields.io/badge/Latest_version-v0.1.5-red)
+![Testing Status](https://img.shields.io/badge/docs-in_progress-green)
+![Testing Status](https://img.shields.io/badge/pypi_package-in_progress-green)
+![Testing Status](https://img.shields.io/badge/PyTorch-v1.13.1-red)
+![Testing Status](https://img.shields.io/badge/license-MIT-blue)
+![Testing Status](https://img.shields.io/badge/python->=3.9-red)
+
+</h5>
+
+<br>
+
+🌟 ``ProG Plus`` is a baby of **ProG++**, an extended library upon [![](https://img.shields.io/badge/ProG-red)](https://github.com/sheldonresearch/ProG). ``ProG Plus`` supports more graph prompt models, and we will merge ``ProG Plus`` to [![](https://img.shields.io/badge/ProG-red)](https://github.com/sheldonresearch/ProG) in the near future (named as **ProG++**). Some implemented models are as follows (_We are now implementing more related models and we will keep integrating more models to ProG++_):  
+>- ( _**KDD23 Best Paper**_ 🌟)  X. Sun, H. Cheng, J. Li, B. Liu, and J. Guan, “All in One: Multi-Task Prompting for Graph Neural Networks,” in KDD, 2023
+>- M. Sun, K. Zhou, X. He, Y. Wang, and X. Wang, “GPPT: Graph Pre-Training and Prompt Tuning to Generalize Graph Neural Networks,” in KDD, 2022
+>- T. Fang, Y. Zhang, Y. Yang, and C. Wang, “Prompt tuning for graph neural networks,” arXiv preprint, 2022.
+>- T. Fang, Y. Zhang, Y. Yang, C. Wang, and L. Chen, “Universal Prompt Tuning for Graph Neural Networks,” in NeurIPS, 2023.
+
+
+<h5 align='center'>
+  
+Thanks to Dr. Xiangguo Sun for his [![](https://img.shields.io/badge/Python_Library-ProG-red)](https://github.com/sheldonresearch/ProG). Please visit their [website](https://github.com/sheldonresearch/ProG) to inquire more details on **ProG**, **ProG Plus**, and **ProG++**
+
+</h5>
 
 
 ## Package Dependencies
@@ -19,7 +48,9 @@ It is an improvement of project [[Prog](https://github.com/sheldonresearch/ProG 
 or 
 ``conda install pyg -c pyg``
 
+## Usage
 
+See in [https://github.com/sheldonresearch/ProG](https://github.com/sheldonresearch/ProG)
 
 ## Citation
 
@@ -38,21 +69,4 @@ bibtex
   doi = {10.1145/3580305.3599256}
 }
 
-```
-```
-@inproceedings{sun2022gppt,
-  title={Gppt: Graph pre-training and prompt tuning to generalize graph neural networks},
-  author={Sun, Mingchen and Zhou, Kaixiong and He, Xin and Wang, Ying and Wang, Xin},
-  booktitle={Proceedings of the 28th ACM SIGKDD Conference on Knowledge Discovery and Data Mining},
-  pages={1717--1727},
-  year={2022}
-}
-```
-```
-@article{fang2022universal,
-  title={Universal Prompt Tuning for Graph Neural Networks},
-  author={Fang, Taoran and Zhang, Yunchao and Yang, Yang and Wang, Chunping and Chen, Lei},
-  journal={arXiv preprint arXiv:2209.15240},
-  year={2022}
-}
 ```
