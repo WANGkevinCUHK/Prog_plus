@@ -25,7 +25,11 @@ ProG Plus
 
 <h5 align='center'>
   
-Thanks to Dr. Xiangguo Sun for his [![](https://img.shields.io/badge/Python_Library-ProG-red)](https://github.com/sheldonresearch/ProG). Please visit their [website](https://github.com/sheldonresearch/ProG) to inquire more details on **ProG**, **ProG Plus**, and **ProG++**
+Thanks to Dr. Xiangguo Sun for his
+
+[![](https://img.shields.io/badge/Python_Library-ProG-red)](https://github.com/sheldonresearch/ProG)
+
+Please visit their [website](https://github.com/sheldonresearch/ProG) to inquire more details on **ProG**, **ProG Plus**, and **ProG++**
 
 </h5>
 
