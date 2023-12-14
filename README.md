@@ -2,13 +2,6 @@
 ProG Plus (Updating)
 </h1>
 
-|  | pre-training task |  |  | prompt design |  |  | downstream tasks |  |  | \| answering function |  |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| Paper | node | edge | graph | prompt components | inserting pattern | prompt tuning | I node | edge | graph | Preset | Learnable |
-| GPPT <br> $(\mathrm{KDD} 2022[78])$ | $x$ | $\checkmark$ | $x$ | structure token: <br> $\mathbf{s}_v \in \mathbb{R}^d$ <br> task token: <br> $\mathbf{c}_y \in \mathbb{R}^d$ | $\begin{aligned} $\mathbf{s}_{v_i} & \leftarrow f_\theta\left(v_i\right) \\\tilde{\mathbf{s}}_{y, v_i} & \leftarrow\left[\mathbf{c}_y, \mathbf{s}_{v_i}\right]\end{aligned}$$ | Cross Entropy | $\checkmark$ | $x$ | $x$ | $\checkmark$ | $x$ |
-| GPF <br> (arXiv [11]) | $\checkmark$ | $\checkmark$ | $\checkmark$ | prompt feature $\mathbf{p} \in \mathbb{R}^d$ | $\tilde{\mathbf{s}}_i \leftarrow \mathrm{x}_i+\mathrm{p}$ | $\max _{p, \phi} \sum_{\left(y_i, \tilde{s}_i\right)}$ <br> $p_{\pi, \phi}\left(y_i \mid \mathbf{s}_i\right)$ | $x$ | $x$ | $\checkmark$ | $x$ | $\checkmark$ |
-| All in One <br> (KDD 2023 [80]) | $x$ | $x$ | $\checkmark$ | prompt token: <br> $\mathcal{P}=\left\{\mathbf{p}_1, \ldots, \mathbf{p}_{\|\mathcal{P}\|}\right\}$ <br> token structure: <br> $\left\{\left(\mathbf{p}_i, \mathbf{p}_j\right) \mid \mathbf{p}_i, \mathbf{p}_j \in \mathcal{P}\right\}$ | $w_{i k} \leftarrow \sigma\left(\mathbf{p}_k \cdot \mathbf{x}_i^T\right)$ <br> if $\sigma\left(\mathbf{p}_k \cdot \mathbf{x}_i^T\right)>\delta$ else 0 <br> $\tilde{\mathbf{s}}_i \leftarrow \mathbf{x}_i+\sum_{k=1}^{\|\mathcal{P}\|} w_{i k} \mathbf{p}_k$ | Meta-Learning | $\checkmark$ | $\checkmark$ | $\checkmark$ | $\checkmark$ | $\checkmark$ |
-| GraphPrompt <br> (WWW 2023[52]) | $x$ | $\checkmark$ | $x$ | prompt token: <br> $\mathbf{p}_t \in \mathbb{R}^d, t \in \mathcal{T}$ <br> structure token: $\mathbf{s} \in \mathbb{R}^d$ <br> task token: $\mathbf{c}_y \in \mathbb{R}^d$ | $\tilde{\mathbf{s}}_i^t \leftarrow \operatorname{Readout}\left(\left\{\mathbf{p}_t \odot f_\pi(v) \mid\right.\right.$ <br> $\left.\left.v \in V\left(\mathcal{S}_i\right)\right\}\right)$ <br> $\mathbf{c}_y \leftarrow \operatorname{Mean}\left(\left\{\tilde{\mathbf{s}}_j^t \mid y_j=y\right\}\right)$ | $\min _{\mathrm{p}_t}-\sum_{\left(y_i, \mathcal{S}_i\right)} \ln$ <br> $\frac{\exp \left(\operatorname{sim}\left(s_i^t, c_{y_i}\right) / \tau\right)}{\sum_{y \in Y} \exp \left(\operatorname{sim}\left(\tilde{s}_i^t, c_y\right) / \tau\right)}$ | $\checkmark$ | $x$ | $\checkmark$ | $\checkmark$ | $x$ |
 
 <h5 align="left">
 
