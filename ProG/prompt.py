@@ -1,11 +1,11 @@
 import torch
 import torch.nn.functional as F
 from torch_geometric.data import Batch, Data
-from utils import act
+from .utils import act
 import warnings
 from deprecated.sphinx import deprecated
 from sklearn.cluster import KMeans
-from Model.model import GNN
+# from .Model.model import GNN
 from torch_geometric.nn.inits import glorot
 
 class LightPrompt(torch.nn.Module):
@@ -59,7 +59,6 @@ class LightPrompt(torch.nn.Module):
 
         pg_batch = Batch.from_data_list(pg_list)
         return pg_batch
-
 
 class HeavyPrompt(LightPrompt):
     def __init__(self, token_dim, token_num, cross_prune=0.1, inner_prune=0.01):
@@ -128,47 +127,15 @@ class FrontAndHead(torch.nn.Module):
 
         return pre
 
-@deprecated(version='1.0', reason="Pipeline is deprecated, use FrontAndHead instead")
-class Pipeline(torch.nn.Module):
-    def __init__(self, input_dim, dataname, gcn_layer_num=2, hid_dim=16, num_classes=2,
-                 task_type="multi_label_classification",
-                 token_num=10, cross_prune=0.1, inner_prune=0.3, gnn_type='TransformerConv'):
-        warnings.warn("deprecated", DeprecationWarning)
-
-        super().__init__()
-        # load pre-trained GNN
-        self.gnn = GNN(input_dim, hid_dim=hid_dim, out_dim=hid_dim, gcn_layer_num=gcn_layer_num, gnn_type=gnn_type)
-        pre_train_path = './pre_trained_gnn/{}.GraphCL.{}.pth'.format(dataname, gnn_type)
-        self.gnn.load_state_dict(torch.load(pre_train_path))
-        print("successfully load pre-trained weights for gnn! @ {}".format(pre_train_path))
-        for p in self.gnn.parameters():
-            p.requires_grad = False
-
-        self.PG = HeavyPrompt(token_dim=input_dim, token_num=token_num, cross_prune=cross_prune,
-                              inner_prune=inner_prune)
-
-        if task_type == 'multi_label_classification':
-            self.answering = torch.nn.Sequential(
-                torch.nn.Linear(hid_dim, num_classes),
-                torch.nn.Softmax(dim=1))
-        else:
-            raise NotImplementedError
-
-    def forward(self, graph_batch: Batch):
-        prompted_graph = self.PG(graph_batch)
-        graph_emb = self.gnn(prompted_graph.x, prompted_graph.edge_index, prompted_graph.batch)
-        pre = self.answering(graph_emb)
-
-        return pre
-
 class GPPTPrompt(torch.nn.Module):
-    def __init__(self, n_hidden, center_num, n_classes):
+    def __init__(self, n_hidden, center_num, n_classes, dropout):
         super(GPPTPrompt, self).__init__()
         self.center_num = center_num
         self.prompt = torch.nn.Linear(n_hidden, center_num, bias=False)
         self.pp = torch.nn.ModuleList()
         for i in range(center_num):
             self.pp.append(torch.nn.Linear(2 * n_hidden, n_classes, bias=False))
+        self.dropout = torch.nn.Dropout(dropout)
 
     def weigth_init(self,data,feature,label,index):
         h = self.dropout(feature)
@@ -179,16 +146,12 @@ class GPPTPrompt(torch.nn.Module):
                 h = self.activation(h)
                 h = self.dropout(h)
         h = self.activation(h)
-        data.h=h
-        
+        data.h=h        
         features=h[index]
         labels=label[index.long()]
-        cluster = KMeans(n_clusters=self.center_num,random_state=0).fit(features.detach().cpu())
-        
+        cluster = KMeans(n_clusters=self.center_num,random_state=0).fit(features.detach().cpu())        
         temp=torch.FloatTensor(cluster.cluster_centers_).cuda()
         self.prompt.weight.data = temp.clone().detach()
-
-
         p=[]
         for i in range(self.n_classes):
             p.append(features[labels==i].mean(dim=0).view(1,-1))
@@ -217,7 +180,7 @@ class GPPTPrompt(torch.nn.Module):
 class GPF(torch.nn.Module):
     def __init__(self, in_channels: int):
         super(GPF, self).__init__()
-        self.global_emb = torch.nn.Parameter(torch.Tensor(1, in_channels))
+        self.global_emb = torch.nn.Parameter(torch.Tensor(1,in_channels))
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -225,7 +188,6 @@ class GPF(torch.nn.Module):
 
     def add(self, x: torch.Tensor):
         return x + self.global_emb
-
 
 class GPF_plus(torch.nn.Module):
     def __init__(self, in_channels: int, p_num: int):
@@ -246,184 +208,184 @@ class GPF_plus(torch.nn.Module):
 
         return x + p
 
-class GPrompt(torch.nn.modules):
-    def __init__(self):
-        super(GPrompt,self).__init__()
+# class GPrompt(torch.nn.modules):
+#     def __init__(self):
+#         super(GPrompt,self).__init__()
 
-    @staticmethod
-    def split_and_batchify_graph_feats(batched_graph_feats, graph_sizes):
-        bsz = graph_sizes.size(0)
-        dim, dtype, device = batched_graph_feats.size(-1), batched_graph_feats.dtype, batched_graph_feats.device
+#     @staticmethod
+#     def split_and_batchify_graph_feats(batched_graph_feats, graph_sizes):
+#         bsz = graph_sizes.size(0)
+#         dim, dtype, device = batched_graph_feats.size(-1), batched_graph_feats.dtype, batched_graph_feats.device
 
-        min_size, max_size = graph_sizes.min(), graph_sizes.max()
-        mask = torch.ones((bsz, max_size), dtype=torch.uint8, device=device, requires_grad=False)
+#         min_size, max_size = graph_sizes.min(), graph_sizes.max()
+#         mask = torch.ones((bsz, max_size), dtype=torch.uint8, device=device, requires_grad=False)
 
-        if min_size == max_size:
-            return batched_graph_feats.view(bsz, max_size, -1), mask
-        else:
-            graph_sizes_list = graph_sizes.view(-1).tolist()
-            unbatched_graph_feats = list(torch.split(batched_graph_feats, graph_sizes_list, dim=0))
-            for i, l in enumerate(graph_sizes_list):
-                if l == max_size:
-                    continue
-                elif l > max_size:
-                    unbatched_graph_feats[i] = unbatched_graph_feats[i][:max_size]
-                else:
-                    mask[i, l:].fill_(0)
-                    zeros = torch.zeros((max_size-l, dim), dtype=dtype, device=device, requires_grad=False)
-                    unbatched_graph_feats[i] = torch.cat([unbatched_graph_feats[i], zeros], dim=0)
-            return torch.stack(unbatched_graph_feats, dim=0), mask
+#         if min_size == max_size:
+#             return batched_graph_feats.view(bsz, max_size, -1), mask
+#         else:
+#             graph_sizes_list = graph_sizes.view(-1).tolist()
+#             unbatched_graph_feats = list(torch.split(batched_graph_feats, graph_sizes_list, dim=0))
+#             for i, l in enumerate(graph_sizes_list):
+#                 if l == max_size:
+#                     continue
+#                 elif l > max_size:
+#                     unbatched_graph_feats[i] = unbatched_graph_feats[i][:max_size]
+#                 else:
+#                     mask[i, l:].fill_(0)
+#                     zeros = torch.zeros((max_size-l, dim), dtype=dtype, device=device, requires_grad=False)
+#                     unbatched_graph_feats[i] = torch.cat([unbatched_graph_feats[i], zeros], dim=0)
+#             return torch.stack(unbatched_graph_feats, dim=0), mask
 
-    def Forward():
-        pass
+#     def Forward():
+#         pass
     
-class Gprompt_layer_mean(GPrompt):
-    def __init__(self):
-        super(Gprompt_layer_mean, self).__init__()
-        self.weight= torch.nn.Parameter(torch.Tensor(2, 2))
-    def forward(self, graph_embedding, graph_len):
-        graph_embedding=self.split_and_batchify_graph_feats(graph_embedding, graph_len)[0]
-        graph_prompt_result=graph_embedding.mean(dim=1)
-        return graph_prompt_result
+# class Gprompt_layer_mean(GPrompt):
+#     def __init__(self):
+#         super(Gprompt_layer_mean, self).__init__()
+#         self.weight= torch.nn.Parameter(torch.Tensor(2, 2))
+#     def forward(self, graph_embedding, graph_len):
+#         graph_embedding=self.split_and_batchify_graph_feats(graph_embedding, graph_len)[0]
+#         graph_prompt_result=graph_embedding.mean(dim=1)
+#         return graph_prompt_result
 
-class Gprompt_layer_linear_mean(GPrompt):
-    def __init__(self,input_dim,output_dim):
-        super(Gprompt_layer_linear_mean, self).__init__()
-        self.linear=torch.nn.Linear(input_dim,output_dim)
+# class Gprompt_layer_linear_mean(GPrompt):
+#     def __init__(self,input_dim,output_dim):
+#         super(Gprompt_layer_linear_mean, self).__init__()
+#         self.linear=torch.nn.Linear(input_dim,output_dim)
 
-    def forward(self, graph_embedding, graph_len):
-        graph_embedding=self.linear(graph_embedding)
-        graph_embedding=self.split_and_batchify_graph_feats(graph_embedding, graph_len)[0]
-        graph_prompt_result=graph_embedding.mean(dim=1)
-        graph_prompt_result=torch.nn.functional.normalize(graph_prompt_result,dim=1)
-        return graph_prompt_result
+#     def forward(self, graph_embedding, graph_len):
+#         graph_embedding=self.linear(graph_embedding)
+#         graph_embedding=self.split_and_batchify_graph_feats(graph_embedding, graph_len)[0]
+#         graph_prompt_result=graph_embedding.mean(dim=1)
+#         graph_prompt_result=torch.nn.functional.normalize(graph_prompt_result,dim=1)
+#         return graph_prompt_result
 
-class Gprompt_layer_linear_sum(GPrompt):
-    def __init__(self,input_dim,output_dim):
-        super(Gprompt_layer_linear_sum, self).__init__()
-        self.linear=torch.nn.Linear(input_dim,output_dim)
+# class Gprompt_layer_linear_sum(GPrompt):
+    # def __init__(self,input_dim,output_dim):
+    #     super(Gprompt_layer_linear_sum, self).__init__()
+    #     self.linear=torch.nn.Linear(input_dim,output_dim)
 
-    def forward(self, graph_embedding, graph_len):
-        graph_embedding=self.linear(graph_embedding)
-        graph_embedding=self.split_and_batchify_graph_feats(graph_embedding, graph_len)[0]
-        graph_prompt_result=graph_embedding.sum(dim=1)
-        graph_prompt_result=torch.nn.functional.normalize(graph_prompt_result,dim=1)
-        return graph_prompt_result
-
-
-
-#sum result is same as mean result
-class Gprompt_layer_sum(GPrompt):
-    def __init__(self):
-        super(Gprompt_layer_sum, self).__init__()
-        self.weight= torch.nn.Parameter(torch.Tensor(2, 2))
-    def forward(self, graph_embedding, graph_len):
-        graph_embedding=self.split_and_batchify_graph_feats(graph_embedding, graph_len)[0]
-        graph_prompt_result=graph_embedding.sum(dim=1)
-        return graph_prompt_result
+    # def forward(self, graph_embedding, graph_len):
+    #     graph_embedding=self.linear(graph_embedding)
+    #     graph_embedding=self.split_and_batchify_graph_feats(graph_embedding, graph_len)[0]
+    #     graph_prompt_result=graph_embedding.sum(dim=1)
+    #     graph_prompt_result=torch.nn.functional.normalize(graph_prompt_result,dim=1)
+    #     return graph_prompt_result
 
 
 
-class Gprompt_layer_weighted(GPrompt):
-    def __init__(self,max_n_num):
-        super(Gprompt_layer_weighted, self).__init__()
-        self.weight= torch.nn.Parameter(torch.Tensor(1,max_n_num))
-        self.max_n_num=max_n_num
-        self.reset_parameters()
-    def reset_parameters(self):
-        torch.nn.init.xavier_uniform_(self.weight)
-    def forward(self, graph_embedding, graph_len):
-        graph_embedding=self.split_and_batchify_graph_feats(graph_embedding, graph_len)[0]
-        weight = self.weight[0][0:graph_embedding.size(1)]
-        temp1 = torch.ones(graph_embedding.size(0), graph_embedding.size(2), graph_embedding.size(1)).to(graph_embedding.device)
-        temp1 = weight * temp1
-        temp1 = temp1.permute(0, 2, 1)
-        graph_embedding=graph_embedding*temp1
-        graph_prompt_result=graph_embedding.sum(dim=1)
-        return graph_prompt_result
+# #sum result is same as mean result
+# class Gprompt_layer_sum(GPrompt):
+#     def __init__(self):
+#         super(Gprompt_layer_sum, self).__init__()
+#         self.weight= torch.nn.Parameter(torch.Tensor(2, 2))
+#     def forward(self, graph_embedding, graph_len):
+#         graph_embedding=self.split_and_batchify_graph_feats(graph_embedding, graph_len)[0]
+#         graph_prompt_result=graph_embedding.sum(dim=1)
+#         return graph_prompt_result
 
-class Gprompt_layer_feature_weighted_mean(GPrompt):
-    def __init__(self,input_dim):
-        super(Gprompt_layer_feature_weighted_mean, self).__init__()
-        self.weight= torch.nn.Parameter(torch.Tensor(1,input_dim))
-        self.max_n_num=input_dim
-        self.reset_parameters()
-    def reset_parameters(self):
-        torch.nn.init.xavier_uniform_(self.weight)
-    def forward(self, graph_embedding, graph_len):
-        graph_embedding=self.split_and_batchify_graph_feats(graph_embedding, graph_len)[0]
-        graph_embedding=graph_embedding*self.weight
-        graph_prompt_result=graph_embedding.mean(dim=1)
-        return graph_prompt_result
 
-class Gprompt_layer_feature_weighted_sum(GPrompt):
-    def __init__(self,input_dim):
-        super(Gprompt_layer_feature_weighted_sum, self).__init__()
-        self.weight= torch.nn.Parameter(torch.Tensor(1,input_dim))
-        self.max_n_num=input_dim
-        self.reset_parameters()
-    def reset_parameters(self):
-        torch.nn.init.xavier_uniform_(self.weight)
-    def forward(self, graph_embedding, graph_len):
-        graph_embedding=self.split_and_batchify_graph_feats(graph_embedding, graph_len)[0]
-        graph_embedding=graph_embedding*self.weight
-        graph_prompt_result=graph_embedding.sum(dim=1)
-        return graph_prompt_result
 
-class Gprompt_layer_weighted_matrix(GPrompt):
-    def __init__(self,max_n_num,input_dim):
-        super(Gprompt_layer_weighted_matrix, self).__init__()
-        self.weight= torch.nn.Parameter(torch.Tensor(input_dim,max_n_num))
-        self.max_n_num=max_n_num
-        self.reset_parameters()
-    def reset_parameters(self):
-        torch.nn.init.xavier_uniform_(self.weight)
-    def forward(self, graph_embedding, graph_len):
-        graph_embedding=self.split_and_batchify_graph_feats(graph_embedding, graph_len)[0]
-        weight = self.weight.permute(1, 0)[0:graph_embedding.size(1)]
-        weight = weight.expand(graph_embedding.size(0), weight.size(0), weight.size(1))
-        graph_embedding = graph_embedding * weight
-        #prompt: mean
-        graph_prompt_result=graph_embedding.sum(dim=1)
-        return graph_prompt_result
+# class Gprompt_layer_weighted(GPrompt):
+#     def __init__(self,max_n_num):
+#         super(Gprompt_layer_weighted, self).__init__()
+#         self.weight= torch.nn.Parameter(torch.Tensor(1,max_n_num))
+#         self.max_n_num=max_n_num
+#         self.reset_parameters()
+#     def reset_parameters(self):
+#         torch.nn.init.xavier_uniform_(self.weight)
+#     def forward(self, graph_embedding, graph_len):
+#         graph_embedding=self.split_and_batchify_graph_feats(graph_embedding, graph_len)[0]
+#         weight = self.weight[0][0:graph_embedding.size(1)]
+#         temp1 = torch.ones(graph_embedding.size(0), graph_embedding.size(2), graph_embedding.size(1)).to(graph_embedding.device)
+#         temp1 = weight * temp1
+#         temp1 = temp1.permute(0, 2, 1)
+#         graph_embedding=graph_embedding*temp1
+#         graph_prompt_result=graph_embedding.sum(dim=1)
+#         return graph_prompt_result
 
-class Gprompt_layer_weighted_linear(GPrompt):
-    def __init__(self,max_n_num,input_dim,output_dim):
-        super(Gprompt_layer_weighted_linear, self).__init__()
-        self.weight= torch.nn.Parameter(torch.Tensor(1,max_n_num))
-        self.linear=torch.nn.Linear(input_dim,output_dim)
-        self.max_n_num=max_n_num
-        self.reset_parameters()
-    def reset_parameters(self):
-        torch.nn.init.xavier_uniform_(self.weight)
-    def forward(self, graph_embedding, graph_len):
-        graph_embedding=self.linear(graph_embedding)
-        graph_embedding=self.split_and_batchify_graph_feats(graph_embedding, graph_len)[0]
-        weight = self.weight[0][0:graph_embedding.size(1)]
-        temp1 = torch.ones(graph_embedding.size(0), graph_embedding.size(2), graph_embedding.size(1)).to(graph_embedding.device)
-        temp1 = weight * temp1
-        temp1 = temp1.permute(0, 2, 1)
-        graph_embedding=graph_embedding*temp1
-        graph_prompt_result = graph_embedding.mean(dim=1)
-        return graph_prompt_result
+# class Gprompt_layer_feature_weighted_mean(GPrompt):
+#     def __init__(self,input_dim):
+#         super(Gprompt_layer_feature_weighted_mean, self).__init__()
+#         self.weight= torch.nn.Parameter(torch.Tensor(1,input_dim))
+#         self.max_n_num=input_dim
+#         self.reset_parameters()
+#     def reset_parameters(self):
+#         torch.nn.init.xavier_uniform_(self.weight)
+#     def forward(self, graph_embedding, graph_len):
+#         graph_embedding=self.split_and_batchify_graph_feats(graph_embedding, graph_len)[0]
+#         graph_embedding=graph_embedding*self.weight
+#         graph_prompt_result=graph_embedding.mean(dim=1)
+#         return graph_prompt_result
 
-class Gprompt_layer_weighted_matrix_linear(GPrompt):
-    def __init__(self,max_n_num,input_dim,output_dim):
-        super(Gprompt_layer_weighted_matrix_linear, self).__init__()
-        self.weight= torch.nn.Parameter(torch.Tensor(output_dim,max_n_num))
-        self.linear=torch.nn.Linear(input_dim,output_dim)
-        self.max_n_num=max_n_num
-        self.reset_parameters()
-    def reset_parameters(self):
-        torch.nn.init.xavier_uniform_(self.weight)
-    def forward(self, graph_embedding, graph_len):
-        graph_embedding=self.linear(graph_embedding)
-        graph_embedding=self.split_and_batchify_graph_feats(graph_embedding, graph_len)[0]
-        weight = self.weight.permute(1, 0)[0:graph_embedding.size(1)]
-        weight = weight.expand(graph_embedding.size(0), weight.size(0), weight.size(1))
-        graph_embedding = graph_embedding * weight
-        graph_prompt_result=graph_embedding.mean(dim=1)
-        return graph_prompt_result
+# class Gprompt_layer_feature_weighted_sum(GPrompt):
+#     def __init__(self,input_dim):
+#         super(Gprompt_layer_feature_weighted_sum, self).__init__()
+#         self.weight= torch.nn.Parameter(torch.Tensor(1,input_dim))
+#         self.max_n_num=input_dim
+#         self.reset_parameters()
+#     def reset_parameters(self):
+#         torch.nn.init.xavier_uniform_(self.weight)
+#     def forward(self, graph_embedding, graph_len):
+#         graph_embedding=self.split_and_batchify_graph_feats(graph_embedding, graph_len)[0]
+#         graph_embedding=graph_embedding*self.weight
+#         graph_prompt_result=graph_embedding.sum(dim=1)
+#         return graph_prompt_result
+
+# class Gprompt_layer_weighted_matrix(GPrompt):
+#     def __init__(self,max_n_num,input_dim):
+#         super(Gprompt_layer_weighted_matrix, self).__init__()
+#         self.weight= torch.nn.Parameter(torch.Tensor(input_dim,max_n_num))
+#         self.max_n_num=max_n_num
+#         self.reset_parameters()
+#     def reset_parameters(self):
+#         torch.nn.init.xavier_uniform_(self.weight)
+#     def forward(self, graph_embedding, graph_len):
+#         graph_embedding=self.split_and_batchify_graph_feats(graph_embedding, graph_len)[0]
+#         weight = self.weight.permute(1, 0)[0:graph_embedding.size(1)]
+#         weight = weight.expand(graph_embedding.size(0), weight.size(0), weight.size(1))
+#         graph_embedding = graph_embedding * weight
+#         #prompt: mean
+#         graph_prompt_result=graph_embedding.sum(dim=1)
+#         return graph_prompt_result
+
+# class Gprompt_layer_weighted_linear(GPrompt):
+#     def __init__(self,max_n_num,input_dim,output_dim):
+#         super(Gprompt_layer_weighted_linear, self).__init__()
+#         self.weight= torch.nn.Parameter(torch.Tensor(1,max_n_num))
+#         self.linear=torch.nn.Linear(input_dim,output_dim)
+#         self.max_n_num=max_n_num
+#         self.reset_parameters()
+#     def reset_parameters(self):
+#         torch.nn.init.xavier_uniform_(self.weight)
+#     def forward(self, graph_embedding, graph_len):
+#         graph_embedding=self.linear(graph_embedding)
+#         graph_embedding=self.split_and_batchify_graph_feats(graph_embedding, graph_len)[0]
+#         weight = self.weight[0][0:graph_embedding.size(1)]
+#         temp1 = torch.ones(graph_embedding.size(0), graph_embedding.size(2), graph_embedding.size(1)).to(graph_embedding.device)
+#         temp1 = weight * temp1
+#         temp1 = temp1.permute(0, 2, 1)
+#         graph_embedding=graph_embedding*temp1
+#         graph_prompt_result = graph_embedding.mean(dim=1)
+#         return graph_prompt_result
+
+# class Gprompt_layer_weighted_matrix_linear(GPrompt):
+#     def __init__(self,max_n_num,input_dim,output_dim):
+#         super(Gprompt_layer_weighted_matrix_linear, self).__init__()
+#         self.weight= torch.nn.Parameter(torch.Tensor(output_dim,max_n_num))
+#         self.linear=torch.nn.Linear(input_dim,output_dim)
+#         self.max_n_num=max_n_num
+#         self.reset_parameters()
+#     def reset_parameters(self):
+#         torch.nn.init.xavier_uniform_(self.weight)
+#     def forward(self, graph_embedding, graph_len):
+#         graph_embedding=self.linear(graph_embedding)
+#         graph_embedding=self.split_and_batchify_graph_feats(graph_embedding, graph_len)[0]
+#         weight = self.weight.permute(1, 0)[0:graph_embedding.size(1)]
+#         weight = weight.expand(graph_embedding.size(0), weight.size(0), weight.size(1))
+#         graph_embedding = graph_embedding * weight
+#         graph_prompt_result=graph_embedding.mean(dim=1)
+#         return graph_prompt_result
 
 
 if __name__ == '__main__':

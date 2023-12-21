@@ -1,23 +1,22 @@
 import torch as th
 import torch.nn as nn
-import torch.functional as F
+import torch.nn.functional as F
 import sklearn.linear_model as lm
 import sklearn.metrics as skm
 import torch, gc
 from torch_geometric.nn import SAGEConv
 from torch_geometric.utils import add_self_loops
 from torch_geometric.nn import global_add_pool, global_max_pool, GlobalAttention
-from torch_geometric.nn import GCNConv, global_mean_pool, GATConv, TransformerConv,GINConv,GraphSAGEConv
+from torch_geometric.nn import GCNConv, global_mean_pool, GATConv, TransformerConv,GINConv,SAGEConv
+from torch_geometric.nn import GraphConv as GConv
 import numpy as np
 import sklearn.linear_model as lm
 import sklearn.metrics as skm
 from sklearn.cluster import KMeans
-import os
-import sys
-from prompt import GPPTPrompt
-from utils import act
+
+from ..prompt import GPPTPrompt
+from ..utils import act
 from torch_geometric.nn import MessagePassing
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 
     
 class SAGE(nn.Module):
@@ -94,12 +93,12 @@ class GraphSAGE(nn.Module):
         # self.pp = nn.ModuleList()
         # for i in range(self.center_num):
         #     self.pp.append(nn.Linear(2*n_hidden,n_classes,bias=False))
-        self.prompt_module = GPPTPrompt(n_hidden, center_num, n_classes)
+        self.prompt_module = GPPTPrompt(n_hidden, center_num, n_classes,dropout)
         #replace with GPPTPrompt in prompt.py
         
         
     def model_to_array(self,args):
-        s_dict = torch.load('.pre_trained_gnn/'+args.dataset+'_model_'+args.file_id+'GCN.pt')#,map_location='cuda:0')
+        s_dict = torch.load('/home/chenyizi/ZCY/data/Prog_plus/pre_trained_gnn/citeseer_model_128GCN.pt')#,map_location='cuda:0')
         keys = list(s_dict.keys())
         res = s_dict[keys[0]].view(-1)
         for i in np.arange(1, len(keys), 1):
@@ -107,7 +106,7 @@ class GraphSAGE(nn.Module):
         return res
     def array_to_model(self, args):
         arr=self.model_to_array(args)
-        m_m=torch.load('.pre_trained_gnn/'+args.dataset+'_model_'+args.file_id+'GCN.pt')#,map_location='cuda:0')#+str(args.gpu))
+        m_m=torch.load('/home/chenyizi/ZCY/data/Prog_plus/pre_trained_gnn/citeseer_model_128GCN.pt')#,map_location='cuda:0')#+str(args.gpu))
         indice = 0
         s_dict = self.state_dict()
         for name, param in m_m.items():
@@ -122,7 +121,7 @@ class GraphSAGE(nn.Module):
         self.array_to_model(args)
 
     def weigth_init(self,data,feature,label,index):
-        self.prompt_module.weigth_init(self,data,feature,label,index)
+        self.prompt_module.weigth_init(data,feature,label,index)
         
     
     def update_prompt_weight(self, h):
@@ -164,52 +163,8 @@ class GraphSAGE(nn.Module):
             out[index==i]=self.pp[i](h[index==i])
         return out
     
-class GraphSAGEConv(MessagePassing):
-
-    def __init__(self, emb_dim, aggr="mean", input_layer=False):
-        super(GraphSAGEConv, self).__init__()
-
-        self.emb_dim = emb_dim
-        self.linear = torch.nn.Linear(emb_dim, emb_dim)
-
-        ### Mapping 0/1 edge features to embedding
-        self.edge_encoder = torch.nn.Linear(9, emb_dim)
-
-        ### Mapping uniform input features to embedding.
-        self.input_layer = input_layer
-        if self.input_layer:
-            self.input_node_embeddings = torch.nn.Embedding(2, emb_dim)
-            torch.nn.init.xavier_uniform_(self.input_node_embeddings.weight.data)
-
-        self.aggr = aggr
-
-    def forward(self, x, edge_index, edge_attr):
-        # add self loops in the edge space
-        edge_index = add_self_loops(edge_index, num_nodes=x.size(0))
-
-        # add features corresponding to self-loop edges.
-        self_loop_attr = torch.zeros(x.size(0), 9)
-        self_loop_attr[:, 7] = 1  # attribute for self-loop edge
-        self_loop_attr = self_loop_attr.to(edge_attr.device).to(edge_attr.dtype)
-        edge_attr = torch.cat((edge_attr, self_loop_attr), dim=0)
-
-        edge_embeddings = self.edge_encoder(edge_attr)
-
-        if self.input_layer:
-            x = self.input_node_embeddings(x.to(torch.int64).view(-1, ))
-
-        x = self.linear(x)
-
-        return self.propagate(self.aggr, edge_index, x=x, edge_attr=edge_embeddings)
-
-    def message(self, x_j, edge_attr):
-        return x_j + edge_attr
-
-    def update(self, aggr_out):
-        return F.normalize(aggr_out, p=2, dim=-1)
-
 class GNN(torch.nn.Module):
-    def __init__(self, input_dim, hid_dim=None, out_dim=None, gcn_layer_num=2, pool=None, gnn_type='GAT'):
+    def __init__(self, input_dim, hid_dim=None, out_dim=None, gcn_layer_num=3, pool=None, gnn_type='GAT'):
         super().__init__()
 
         if gnn_type == 'GCN':
@@ -218,12 +173,15 @@ class GNN(torch.nn.Module):
             GraphConv = GATConv
         elif gnn_type == 'TransformerConv':
             GraphConv = TransformerConv
-        elif gnn_type == 'GIN':
-            GraphConv == GINConv
         elif gnn_type == 'GraphSage':
-            GraphConv == GraphSAGEConv
+            GraphConv = SAGEConv
+        elif gnn_type == 'GConv':
+            GraphConv = GConv
+        # The graph neural network operator from the "Weisfeiler and Leman Go Neural: Higher-order Graph Neural Networks" paper.
+        elif gnn_type == 'GIN':
+            GraphConv = GINConv
         else:
-            raise KeyError('gnn_type can be only GAT, GCN and TransformerConv')
+            raise KeyError('gnn_type can be only GAT, GCN, GraphSage, GConv and TransformerConv')
 
         self.gnn_type = gnn_type
         if hid_dim is None:
@@ -246,156 +204,24 @@ class GNN(torch.nn.Module):
         else:
             self.pool = pool
 
-    def forward(self, x, edge_index, batch):
-        for conv in self.conv_layers[0:-1]:
+    def forward(self, x, edge_index, batch = None, prompt = None):
+        for idx, conv in enumerate(self.conv_layers[0:-1]):
+            if idx == 0 and prompt is not None:
+                x = prompt.add(x)
             x = conv(x, edge_index)
             x = act(x)
             x = F.dropout(x, training=self.training)
 
         node_emb = self.conv_layers[-1](x, edge_index)
-        graph_emb = self.pool(node_emb, batch.long())
-        return graph_emb
-
-class GPF_GNN(torch.nn.Module):
-    """
-    Extension of GIN to incorporate edge information by concatenation.
-
-    Args:
-        num_layer (int): the number of GNN layers
-        emb_dim (int): dimensionality of embeddings
-        JK (str): last, concat, max or sum.
-        max_pool_layer (int): the layer from which we use max pool rather than add pool for neighbor aggregation
-        drop_ratio (float): dropout rate
-        gnn_type: gin, gat, graphsage, gcn
-        
-    See https://arxiv.org/abs/1810.00826
-    JK-net: https://arxiv.org/abs/1806.03536
-
-    Output:
-        node representations
-
-    """
-
-    def __init__(self, num_layer, emb_dim, JK="last", drop_ratio=0, gnn_type="gin"):
-        super(GNN, self).__init__()
-        self.num_layer = num_layer
-        self.drop_ratio = drop_ratio
-        self.JK = JK
-
-        if self.num_layer < 2:
-            raise ValueError("Number of GNN layers must be greater than 1.")
-
-        ###List of message-passing GNN convs
-        self.gnns = torch.nn.ModuleList()
-        for layer in range(num_layer):
-            if layer == 0:
-                input_layer = True
-            else:
-                input_layer = False
-
-            if gnn_type == "gin":
-                self.gnns.append(GINConv(emb_dim, aggr="add", input_layer=input_layer))
-            elif gnn_type == "gcn":
-                self.gnns.append(GCNConv(emb_dim, input_layer=input_layer))
-            elif gnn_type == "gat":
-                self.gnns.append(GATConv(emb_dim, input_layer=input_layer))
-            elif gnn_type == "graphsage":
-                self.gnns.append(GraphSAGEConv(emb_dim, input_layer=input_layer))
-
-    # def forward(self, x, edge_index, edge_attr):
-    def forward(self, x, edge_index, edge_attr, prompt=None):
-        h_list = [x]
-        for layer in range(self.num_layer):
-            h = self.gnns[layer](h_list[layer], edge_index, edge_attr, prompt)
-            if layer == self.num_layer - 1:
-                # remove relu from the last layer
-                h = F.dropout(h, self.drop_ratio, training=self.training)
-            else:
-                h = F.dropout(F.relu(h), self.drop_ratio, training=self.training)
-            h_list.append(h)
-
-        if self.JK == "last":
-            node_representation = h_list[-1]
-        elif self.JK == "sum":
-            h_list = [h.unsqueeze_(0) for h in h_list]
-            node_representation = torch.sum(torch.cat(h_list[1:], dim=0), dim=0)[0]
-
-        return node_representation
-    
-class GNN_graphpred(torch.nn.Module):
-    """
-    Extension of GIN to incorporate edge information by concatenation.
-
-    Args:
-        num_layer (int): the number of GNN layers
-        emb_dim (int): dimensionality of embeddings
-        num_tasks (int): number of tasks in multi-task learning scenario
-        drop_ratio (float): dropout rate
-        JK (str): last, concat, max or sum.
-        graph_pooling (str): sum, mean, max, attention, set2set
-        
-    See https://arxiv.org/abs/1810.00826
-    JK-net: https://arxiv.org/abs/1806.03536
-    """
-
-    def __init__(self, num_layer, emb_dim, num_tasks, JK="last", drop_ratio=0, graph_pooling="mean", gnn_type="gin",
-                 final_linear=True, layer_number=1):
-        super(GNN_graphpred, self).__init__()
-        self.num_layer = num_layer
-        self.drop_ratio = drop_ratio
-        self.JK = JK
-        self.emb_dim = emb_dim
-        self.num_tasks = num_tasks
-        self.final_linear = final_linear
-
-        if self.num_layer < 2:
-            raise ValueError("Number of GNN layers must be greater than 1.")
-
-        self.gnn = GPF_GNN(num_layer, emb_dim, JK, drop_ratio, gnn_type=gnn_type)
-
-        # Different kind of graph pooling
-        if graph_pooling == "sum":
-            self.pool = global_add_pool
-        elif graph_pooling == "mean":
-            self.pool = global_mean_pool
-        elif graph_pooling == "max":
-            self.pool = global_max_pool
-        elif graph_pooling == "attention":
-            self.pool = GlobalAttention(gate_nn=torch.nn.Linear(emb_dim, 1))
+        if batch == None:
+            return node_emb
         else:
-            raise ValueError("Invalid graph pooling type.")
+            graph_emb = self.pool(node_emb, batch.long())
+            return graph_emb
 
-        if final_linear:
-            self.graph_pred_linear = torch.nn.ModuleList()
+    def decode(self, z, edge_label_index):
+        return (z[edge_label_index[0]] * z[edge_label_index[1]]).sum(dim=-1)
 
-            for i in range(layer_number - 1):
-                self.graph_pred_linear.append(torch.nn.Linear(2 * self.emb_dim, 2 * self.emb_dim))
-                self.graph_pred_linear[-1].reset_parameters()
-                self.graph_pred_linear.append(torch.nn.ReLU())
-
-            self.graph_pred_linear.append(torch.nn.Linear(2 * self.emb_dim, self.num_tasks))
-            self.graph_pred_linear[-1].reset_parameters()
-
-            # self.graph_pred_linear = torch.nn.Linear(2 * self.emb_dim, self.num_tasks)
-
-    def from_pretrained(self, model_file):
-        # self.gnn.load_state_dict(torch.load(model_file, map_location=lambda storage, loc: storage))
-        self.gnn.load_state_dict(torch.load(model_file, map_location='cpu'))
-
-    def forward(self, data, prompt=None):
-        x, edge_index, edge_attr, batch = data.x, data.edge_index, data.edge_attr, data.batch
-        node_representation = self.gnn(x, edge_index, edge_attr, prompt)
-
-        pooled = self.pool(node_representation, batch)
-        center_node_rep = node_representation[data.center_node_idx]
-
-        graph_rep = torch.cat([pooled, center_node_rep], dim=1)
-
-        emb = graph_rep
-
-        if self.final_linear:
-            for i in range(len(self.graph_pred_linear)):
-                emb = self.graph_pred_linear[i](emb)
-
-        # return self.graph_pred_linear(graph_rep)
-        return emb
+    def decode_all(self, z):
+        prob_adj = z @ z.t()
+        return (prob_adj > 0).nonzero(as_tuple=False).t()

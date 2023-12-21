@@ -6,7 +6,7 @@ from torch_geometric.data import Data
 from random import shuffle
 import random
 
-from prompt import GNN
+from Model.model import GNN
 from utils import gen_ran_output,load_data4pretrain,mkdir, graph_views
 
 class GraphCL(torch.nn.Module):
@@ -158,23 +158,12 @@ class PreTrain(torch.nn.Module):
 
 
 if __name__ == '__main__':
-    print("PyTorch version:", torch.__version__)
 
-    if torch.cuda.is_available():
-        print("CUDA is available")
-        print("CUDA version:", torch.version.cuda)
-        device = torch.device("cuda")
-    else:
-        print("CUDA is not available")
-        device = torch.device("cpu")
-
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(device)
-    # device = torch.device('cpu')
+   
 
     mkdir('./pre_trained_gnn/')
-    # do not use '../pre_trained_gnn/' because hope there should be two folders: (1) '../pre_trained_gnn/'  and (2) './pre_trained_gnn/'
-    # only selected pre-trained models will be moved into (1) so that we can keep reproduction
-
     # pretext = 'GraphCL' 
     pretext = 'SimGRACE' 
     gnn_type = 'TransformerConv'  
