@@ -379,32 +379,32 @@ def GPPT_evaluate(model, data, nid, batch_size, device,sample_list):
 # 	torch.backends.cudnn.benchmark = False
 # 	torch.backends.cudnn.deterministic = True
 
-# def get_init_info(args,dataset,device):
+class NegativeEdge:
+    def __init__(self):
+        """
+        Randomly sample negative edges
+        """
+        pass
 
-#     data,features,labels,train_mask,val_mask,test_mask,in_feats,n_classes,n_edges=my_load_data(dataset)
-#     print("""----Data statistics------'
-#       #Edges %d
-#       #Classes %d
-#       #Train samples %d
-#       #Val samples %d
-#       #Test samples %d""" %
-#           (n_edges, n_classes,
-#            train_mask.int().sum().item(),
-#            val_mask.int().sum().item(),
-#            test_mask.int().sum().item()))
-    
+    def __call__(self, data):
+        num_nodes = data.num_nodes
+        num_edges = data.num_edges
+
+        edge_set = set([str(data.edge_index[0,i].cpu().item()) + "," + str(data.edge_index[1,i].cpu().item()) for i in range(data.edge_index.shape[1])])
+
+        redandunt_sample = torch.randint(0, num_nodes, (2,5*num_edges))
+        sampled_ind = []
+        sampled_edge_set = set([])
+        for i in range(5*num_edges):
+            node1 = redandunt_sample[0,i].cpu().item()
+            node2 = redandunt_sample[1,i].cpu().item()
+            edge_str = str(node1) + "," + str(node2)
+            if not edge_str in edge_set and not edge_str in sampled_edge_set and not node1 == node2:
+                sampled_edge_set.add(edge_str)
+                sampled_ind.append(i)
+            if len(sampled_ind) == num_edges/2:
+                break
+
+        data.negative_edge_index = redandunt_sample[:,sampled_ind]
         
-#     features = features.to(device)
-#     labels = labels.to(device)
-#     train_mask = train_mask.to(device)
-#     val_mask = val_mask.to(device)
-#     test_mask = test_mask.to(device)
-#     print("use cuda:", args.gpu)
-
-#     train_nid = train_mask.nonzero().squeeze()
-#     val_nid = val_mask.nonzero().squeeze()
-#     test_nid = test_mask.nonzero().squeeze()
-#     # g = dgl.remove_self_loop(g)
-#     # n_edges = g.number_of_edges()
-
-#     return data,features,labels,in_feats,n_classes,train_nid,val_nid,test_nid,device
+        return data
