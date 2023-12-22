@@ -164,9 +164,19 @@ class GraphSAGE(nn.Module):
         return out
     
 class GNN(torch.nn.Module):
-    def __init__(self, input_dim, hid_dim=None, out_dim=None, gcn_layer_num=3, pool=None, gnn_type='GAT'):
+    def __init__(self, input_dim, hid_dim=None, out_dim=None, num_layer=3,JK="last", drop_ratio=0, pool='mean', gnn_type='GAT'):
         super().__init__()
-
+        """
+        Args:
+            num_layer (int): the number of GNN layers
+            num_tasks (int): number of tasks in multi-task learning scenario
+            drop_ratio (float): dropout rate
+            JK (str): last, concat, max or sum.
+            pool (str): sum, mean, max, attention, set2set
+            
+        See https://arxiv.org/abs/1810.00826
+        JK-net: https://arxiv.org/abs/1806.03536
+        """
         if gnn_type == 'GCN':
             GraphConv = GCNConv
         elif gnn_type == 'GAT':
@@ -183,36 +193,55 @@ class GNN(torch.nn.Module):
         else:
             raise KeyError('gnn_type can be only GAT, GCN, GraphSage, GConv and TransformerConv')
 
-        self.gnn_type = gnn_type
+        
         if hid_dim is None:
             hid_dim = int(0.618 * input_dim)  # "golden cut"
         if out_dim is None:
             out_dim = hid_dim
-        if gcn_layer_num < 2:
-            raise ValueError('GNN layer_num should >=2 but you set {}'.format(gcn_layer_num))
-        elif gcn_layer_num == 2:
+        if num_layer < 2:
+            raise ValueError('GNN layer_num should >=2 but you set {}'.format(num_layer))
+        elif num_layer == 2:
             self.conv_layers = torch.nn.ModuleList([GraphConv(input_dim, hid_dim), GraphConv(hid_dim, out_dim)])
         else:
             layers = [GraphConv(input_dim, hid_dim)]
-            for i in range(gcn_layer_num - 2):
+            for i in range(num_layer - 2):
                 layers.append(GraphConv(hid_dim, hid_dim))
             layers.append(GraphConv(hid_dim, out_dim))
             self.conv_layers = torch.nn.ModuleList(layers)
 
-        if pool is None:
+        self.JK = JK
+        self.drop_ratio = drop_ratio
+        # Different kind of graph pooling
+        if pool == "sum":
+            self.pool = global_add_pool
+        elif pool == "mean":
             self.pool = global_mean_pool
+        elif pool == "max":
+            self.pool = global_max_pool
+        # elif pool == "attention":
+        #     self.pool = GlobalAttention(gate_nn=torch.nn.Linear(emb_dim, 1))
         else:
-            self.pool = pool
+            raise ValueError("Invalid graph pooling type.")
+
+        self.gnn_type = gnn_type
 
     def forward(self, x, edge_index, batch = None, prompt = None):
+        h_list = [x]
         for idx, conv in enumerate(self.conv_layers[0:-1]):
             if idx == 0 and prompt is not None:
                 x = prompt.add(x)
             x = conv(x, edge_index)
             x = act(x)
-            x = F.dropout(x, training=self.training)
-
-        node_emb = self.conv_layers[-1](x, edge_index)
+            x = F.dropout(x, self.drop_ratio, training=self.training)
+            h_list.append(x)
+        x = self.conv_layers[-1](x, edge_index)
+        h_list.append(x)
+        if self.JK == "last":
+            node_emb = h_list[-1]
+        elif self.JK == "sum":
+            h_list = [h.unsqueeze_(0) for h in h_list]
+            node_emb = torch.sum(torch.cat(h_list[1:], dim=0), dim=0)[0]
+        
         if batch == None:
             return node_emb
         else:
