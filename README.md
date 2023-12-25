@@ -8,7 +8,7 @@ ProG Plus (Updating)
 ![](https://img.shields.io/badge/Latest_version-v0.1.5-red)
 ![Testing Status](https://img.shields.io/badge/docs-in_progress-green)
 ![Testing Status](https://img.shields.io/badge/pypi_package-in_progress-green)
-![Testing Status](https://img.shields.io/badge/PyTorch-v1.13.1-red)
+![Testing Status](https://img.shields.io/badge/PyTorch-v2.0.1-red)
 ![Testing Status](https://img.shields.io/badge/license-MIT-blue)
 ![Testing Status](https://img.shields.io/badge/python->=3.9-red)
 
