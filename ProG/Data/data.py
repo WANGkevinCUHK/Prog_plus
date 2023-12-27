@@ -4,7 +4,7 @@ from random import shuffle
 
 from torch_geometric.data import Batch
 from collections import defaultdict
-
+from torch_geometric.datasets import TUDataset
 
 def multi_class_NIG(dataname, num_class,shots=100):
     """
@@ -58,6 +58,42 @@ def multi_class_NIG(dataname, num_class,shots=100):
 
     return train_data, test_data, train_list,test_list
 
+def load4graph(dataset_name):
+
+    dataset = TUDataset(root='data/TUDataset', name=(dataset_name))
+
+    print()
+    print(f'Dataset: {dataset}:')
+    print('====================')
+    print(f'Number of graphs: {len(dataset)}')
+    print(f'Number of features: {dataset.num_features}')
+    print(f'Number of classes: {dataset.num_classes}')
+
+    data = dataset[0]  # Get the first graph object.
+
+    print()
+    print(data)
+    print('=============================================================')
+
+    # Gather some statistics about the first graph.
+    print(f'Number of nodes: {data.num_nodes}')
+    print(f'Number of edges: {data.num_edges}')
+    print(f'Average node degree: {data.num_edges / data.num_nodes:.2f}')
+    print(f'Has isolated nodes: {data.has_isolated_nodes()}')
+    print(f'Has self-loops: {data.has_self_loops()}')
+    print(f'Is undirected: {data.is_undirected()}')
+
+
+    torch.manual_seed(12345)
+    dataset = dataset.shuffle()
+
+    train_dataset = dataset[:150]
+    test_dataset = dataset[150:]
+
+    print(f'Number of training graphs: {len(train_dataset)}')
+    print(f'Number of test graphs: {len(test_dataset)}')
+     
+    return dataset,train_dataset,test_dataset 
 
 if __name__ == '__main__':
     pass
