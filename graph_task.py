@@ -22,7 +22,8 @@ model = GNN(input_dim=dataset.num_features,out_dim=dataset.num_classes, gnn_type
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 criterion = torch.nn.CrossEntropyLoss()
 
-prompt_type ='ProG'
+# prompt_type ='ProG'
+prompt_type = 's'
 
 if prompt_type =='ProG':
     lr, wd = 0.001, 0.00001
@@ -34,6 +35,8 @@ if prompt_type == 'gpf':
     prompt = GPF(dataset.num_features).to(device)
 elif prompt_type == 'gpf-plus':
     prompt = GPF_plus(dataset.num_features,dataset.num_nodes ).to(device)
+else:
+    prompt = None
 
 
 def prompt_train(PG, train_loader, model, opi_pg, device, epoch, prompt_epoch):
@@ -86,32 +89,35 @@ def acc_f1_over_batches(test_loader, PG, model, num_class, device):
     accuracy.reset()
     macro_f1.reset()
   
-def train(model,train_loader):
+def train(model,train_loader,device):
     model.train()
-
     for data in train_loader:  # Iterate in batches over the training dataset.
+         data = data.to(device)
          out = model(data.x, data.edge_index, data.batch)  # Perform a single forward pass.
          loss = criterion(out, data.y)  # Compute the loss.
          loss.backward()  # Derive gradients.
          optimizer.step()  # Update parameters based on gradients.
          optimizer.zero_grad()  # Clear gradients.
 
-def test(model,loader):
-     model.eval()
+def test(model,loader,device):
+    model.eval()
 
-     correct = 0
-     for data in loader:  # Iterate in batches over the training/test dataset.
-         out = model(data.x, data.edge_index, data.batch)  
-         pred = out.argmax(dim=1)  # Use the class with highest probability.
-         correct += int((pred == data.y).sum())  # Check against ground-truth labels.
-     return correct / len(loader.dataset)  # Derive ratio of correct predictions.
+    correct = 0
+    for data in loader: 
+        data = data.to(device) # Iterate in batches over the training/test dataset.
+        out = model(data.x, data.edge_index, data.batch)  
+        pred = out.argmax(dim=1)  # Use the class with highest probability.
+        correct += int((pred == data.y).sum())  # Check against ground-truth labels.
+    return correct / len(loader.dataset)  # Derive ratio of correct predictions.
 
 
 if prompt == None:
-    train(model,train_loader)
-    train_acc = test(model, train_loader)
-    test_acc = test(model, test_loader)
-    # print(f'Epoch: {epoch:03d}, Train Acc: {train_acc:.4f}, Test Acc: {test_acc:.4f}')
+    epoch=100
+    for i in range(1, epoch +1):
+        train(model,train_loader, device)
+        train_acc = test(model, train_loader, device)
+        test_acc = test(model, test_loader, device)
+        print(f'Epoch: {i:03d}, Train Acc: {train_acc:.4f}, Test Acc: {test_acc:.4f}')
 
 if prompt_type == 'ProG':
     prompt_epoch = 200
