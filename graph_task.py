@@ -4,39 +4,7 @@ from torch_geometric.loader import DataLoader
 from ProG.Model.model import GNN
 from ProG.prompt import GPF,GPF_plus,LightPrompt
 from torch import nn, optim
-from ProG.Data.data import load4graph
-from ProG.eva import acc_f1_over_batches
-
-dataset_name = 'MUTAG'
-dataset, train_dataset, test_dataset = load4graph(dataset_name)
-
-
-train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
-# Number of graphs in the current batch: 64
-# Batch(edge_attr=[2560, 4], edge_index=[2, 2560], x=[1154, 7], y=[64], batch=[1154], ptr=[65])
-print("prepare data is finished!")
-
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = GNN(input_dim=dataset.num_features,out_dim=dataset.num_classes, gnn_type='GraphSage').to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-criterion = torch.nn.CrossEntropyLoss()
-
-# prompt_type ='ProG'
-prompt_type = 's'
-
-if prompt_type =='ProG':
-    lr, wd = 0.001, 0.00001
-    prompt = LightPrompt(token_dim=dataset.num_features, token_num_per_group=100, group_num=dataset.num_classes, inner_prune=0.01)
-    for p in model.parameters():
-        p.requires_grad = False
-    opi = optim.Adam(filter(lambda p: p.requires_grad, prompt.parameters()),lr=lr, weight_decay=wd)
-if prompt_type == 'gpf':
-    prompt = GPF(dataset.num_features).to(device)
-elif prompt_type == 'gpf-plus':
-    prompt = GPF_plus(dataset.num_features,dataset.num_nodes ).to(device)
-else:
-    prompt = None
+from ProG.Data.data import load_graph_task
 
 
 def prompt_train(PG, train_loader, model, opi_pg, device, epoch, prompt_epoch):
@@ -89,42 +57,77 @@ def acc_f1_over_batches(test_loader, PG, model, num_class, device):
     accuracy.reset()
     macro_f1.reset()
   
-def train(model,train_loader,device):
+def train(model,train_loader,prompt,device):
     model.train()
     for data in train_loader:  # Iterate in batches over the training dataset.
          data = data.to(device)
-         out = model(data.x, data.edge_index, data.batch)  # Perform a single forward pass.
+         out = model(data.x, data.edge_index, data.batch, prompt = prompt)  # Perform a single forward pass.
          loss = criterion(out, data.y)  # Compute the loss.
          loss.backward()  # Derive gradients.
          optimizer.step()  # Update parameters based on gradients.
          optimizer.zero_grad()  # Clear gradients.
 
-def test(model,loader,device):
+def test(model,loader, prompt, device):
     model.eval()
 
     correct = 0
     for data in loader: 
         data = data.to(device) # Iterate in batches over the training/test dataset.
-        out = model(data.x, data.edge_index, data.batch)  
+        out = model(data.x, data.edge_index, data.batch, prompt = prompt)  
         pred = out.argmax(dim=1)  # Use the class with highest probability.
         correct += int((pred == data.y).sum())  # Check against ground-truth labels.
     return correct / len(loader.dataset)  # Derive ratio of correct predictions.
 
 
-if prompt == None:
-    epoch=100
-    for i in range(1, epoch +1):
-        train(model,train_loader, device)
-        train_acc = test(model, train_loader, device)
-        test_acc = test(model, test_loader, device)
-        print(f'Epoch: {i:03d}, Train Acc: {train_acc:.4f}, Test Acc: {test_acc:.4f}')
+
+
+dataset_name = 'MUTAG'
+dataset, train_dataset, test_dataset = load_graph_task(dataset_name)
+
+
+train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+# Number of graphs in the current batch: 64
+# Batch(edge_attr=[2560, 4], edge_index=[2, 2560], x=[1154, 7], y=[64], batch=[1154], ptr=[65])
+print("prepare data is finished!")
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+model = GNN(input_dim=dataset.num_features,out_dim=dataset.num_classes, gnn_type='GraphSage').to(device)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+criterion = torch.nn.CrossEntropyLoss()
+
+# prompt_type ='ProG'
+prompt_type = 'gpf-plus'
+
+if prompt_type == 'None':
+    prompt_type = None
+elif prompt_type =='ProG':
+    lr, wd = 0.001, 0.00001
+    prompt = LightPrompt(token_dim=dataset.num_features, token_num_per_group=100, group_num=dataset.num_classes, inner_prune=0.01)
+    for p in model.parameters():
+        p.requires_grad = False
+    opi = optim.Adam(filter(lambda p: p.requires_grad, prompt.parameters()),lr=lr, weight_decay=wd)
+elif prompt_type == 'gpf':
+    prompt = GPF(dataset.num_features).to(device)
+elif prompt_type == 'gpf-plus':
+    prompt = GPF_plus(dataset.num_features,dataset.num_nodes).to(device)
+else:
+    raise KeyError(" We don't support this kind of prompt.")
+
 
 if prompt_type == 'ProG':
     prompt_epoch = 200
     for j in range(1, prompt_epoch + 1):
         prompt_train(prompt, train_loader, model, opi, device, epoch = j, prompt_epoch = prompt_epoch)
         acc_f1_over_batches(test_loader, prompt, model, dataset.num_classes, device)
-        
+
+else:
+    epoch=100
+    for i in range(1, epoch +1):
+        train(model, train_loader, prompt = prompt, device = device)
+        train_acc = test(model, train_loader, prompt = prompt, device = device)
+        test_acc = test(model, test_loader, prompt = prompt, device = device)
+        print(f'Epoch: {i:03d}, Train Acc: {train_acc:.4f}, Test Acc: {test_acc:.4f}') 
         
 
         
