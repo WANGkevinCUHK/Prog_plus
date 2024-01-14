@@ -6,11 +6,15 @@ from ProG.Data.data import load_node_task
 from ProG.utils import constraint
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-dataset_name ='Cora'
+dataset_name ='CiteSeer'
+gnn_type = 'GCN'
 data, dataset = load_node_task(dataset_name)
 data = data.to(device)
 data.train_id = torch.nonzero(data.train_mask).squeeze(1)
-model = GNN(input_dim=dataset.num_features,out_dim=dataset.num_classes, gnn_type='GCN').to(device)
+model = GNN(input_dim=dataset.num_features,out_dim=dataset.num_classes, gnn_type=gnn_type).to(device)
+pre_train_path = '/home/chenyizi/ZCY/data/Prog_plus/pre_trained_gnn/{}.GraphCL.{}.pth'.format(dataset_name, gnn_type)
+model.load_state_dict(torch.load(pre_train_path))
+print("successfully load pre-trained weights for gnn! @ {}".format(pre_train_path))
 
 # setting prompt
 prompt_type = 'gppt'
