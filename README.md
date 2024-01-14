@@ -41,6 +41,7 @@ Please visit their [website](https://github.com/sheldonresearch/ProG) to inquire
 - [ ] Dataset:  support graph-level datasets, PROTEINS, IMDB-BINARY, REDDIT-BINARY, ENZYMES;
 - [ ] Pre_train: implementation of DGI, contextpred
 - [ ] Prompt: Gprompt(WWW23)
+- [ ] induced graph
       
 ## Package Dependencies
 --cuda 11.8
