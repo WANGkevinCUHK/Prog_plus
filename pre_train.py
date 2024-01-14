@@ -9,6 +9,7 @@ from torch.utils.data import TensorDataset as TDataset
 from torch.utils.data import DataLoader as TDataLoader
 from ProG.Model.model import GNN
 from ProG.utils import gen_ran_output,load_data4pretrain,mkdir, graph_views
+from ProG.Data.data import load_graph_task,load_node_task
 from torch.optim import Adam
 import time
 
@@ -41,17 +42,16 @@ class GraphCL(torch.nn.Module):
 
 class PreTrain(torch.nn.Module):
     def __init__(self, pretext="GraphCL", gnn_type='TransformerConv',
-                 input_dim=None, hid_dim=None, gln=2):
+                 input_dim=None, out_dim=None, gln=2):
         super(PreTrain, self).__init__()
         self.pretext = pretext
         self.gnn_type=gnn_type
 
-        self.gnn = GNN(input_dim=input_dim, hid_dim=hid_dim, out_dim=hid_dim, gcn_layer_num=gln, pool=None,
-                       gnn_type=gnn_type)
+        self.gnn = GNN(input_dim=input_dim, out_dim=out_dim, num_layer=gln, gnn_type=gnn_type)
 
         if pretext in ['GraphCL', 'SimGRACE','LinkPrediction']:
-            self.model = GraphCL(self.gnn, hid_dim=hid_dim)
-            self.model = LinkPrediction(self.gnn)
+            self.model = GraphCL(self.gnn, hid_dim=int(0.618 * input_dim))
+            # self.model = LinkPrediction(self.gnn)
         else:
             raise ValueError("pretext should be GraphCL, SimGRACE, LinkPrediction")
 
@@ -214,18 +214,18 @@ class LinkPrediction(torch.nn.Module):
 
 if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    mkdir('./pre_trained_gnn/')
+    mkdir('./Prog_plus/pre_trained_gnn/')
     # do not use '../pre_trained_gnn/' because hope there should be two folders: (1) '../pre_trained_gnn/'  and (2) './pre_trained_gnn/'
     # only selected pre-trained models will be moved into (1) so that we can keep reproduction
 
     # pretext = 'GraphCL' 
     pretext = 'SimGRACE' 
-    gnn_type = 'TransformerConv'  
+    # gnn_type = 'TransformerConv'  
     # gnn_type = 'GAT'
-    # gnn_type = 'GCN'
+    gnn_type = 'GCN'
     dataname, num_parts = 'CiteSeer', 200
-    graph_list, input_dim, hid_dim = load_data4pretrain(dataname, num_parts)
+    input_dim, out_dim, _, _, graph_list = load_graph_task(dataname, num_parts)
 
-    pt = PreTrain(pretext, gnn_type, input_dim, hid_dim, gln=2)
+    pt = PreTrain(pretext, gnn_type, input_dim, out_dim, gln=3)
     pt.model.to(device) 
     pt.train(dataname, graph_list, batch_size=10, aug1='dropN', aug2="permE", aug_ratio=None,lr=0.01, decay=0.0001,epochs=100)
