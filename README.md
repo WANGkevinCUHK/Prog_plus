@@ -38,6 +38,7 @@ Please visit their [website](https://github.com/sheldonresearch/ProG) to inquire
 > **Note**
 > <span style="color:blue"> Current experimental datasets: Cora/Citeseer/Pubmed/MUTAG</span>
 
+- [ ] **Write a comprehensive usage document**
 - [ ] Dataset:  support graph-level datasets, PROTEINS, IMDB-BINARY, REDDIT-BINARY, ENZYMES; Add node-level datasets.
 - [ ] Pre_train: implementation of DGI, contextpred
 - [ ] Prompt: Gprompt(WWW23)
