@@ -38,10 +38,11 @@ Please visit their [website](https://github.com/sheldonresearch/ProG) to inquire
 > **Note**
 > <span style="color:blue"> Current experimental datasets: Cora/Citeseer/Pubmed/MUTAG</span>
 
-- [ ] Dataset:  support graph-level datasets, PROTEINS, IMDB-BINARY, REDDIT-BINARY, ENZYMES;
+- [ ] Dataset:  support graph-level datasets, PROTEINS, IMDB-BINARY, REDDIT-BINARY, ENZYMES; Add node-level datasets.
 - [ ] Pre_train: implementation of DGI, contextpred
 - [ ] Prompt: Gprompt(WWW23)
 - [ ] induced graph
+- [ ] 统一args
       
 ## Package Dependencies
 --cuda 11.8
