@@ -50,7 +50,7 @@ class PreTrain(torch.nn.Module):
         self.gnn = GNN(input_dim=input_dim, out_dim=out_dim, num_layer=gln, gnn_type=gnn_type)
 
         if pretext in ['GraphCL', 'SimGRACE','LinkPrediction']:
-            self.model = GraphCL(self.gnn, hid_dim=int(0.618 * input_dim))
+            self.model = GraphCL(self.gnn, hid_dim=out_dim)
             # self.model = LinkPrediction(self.gnn)
         else:
             raise ValueError("pretext should be GraphCL, SimGRACE, LinkPrediction")
@@ -154,7 +154,7 @@ class PreTrain(torch.nn.Module):
             if train_loss_min > train_loss:
                 train_loss_min = train_loss
                 torch.save(self.model.gnn.state_dict(),
-                           "./pre_trained_gnn/{}.{}.{}.pth".format(dataname, self.pretext, self.gnn_type))
+                           "./Prog_plus/pre_trained_gnn/{}.{}.{}.pth".format(dataname, self.pretext, self.gnn_type))
                 # do not use '../pre_trained_gnn/' because hope there should be two folders: (1) '../pre_trained_gnn/'  and (2) './pre_trained_gnn/'
                 # only selected pre-trained models will be moved into (1) so that we can keep reproduction
                 print("+++model saved ! {}.{}.{}.pth".format(dataname, self.pretext, self.gnn_type))
@@ -218,8 +218,8 @@ if __name__ == '__main__':
     # do not use '../pre_trained_gnn/' because hope there should be two folders: (1) '../pre_trained_gnn/'  and (2) './pre_trained_gnn/'
     # only selected pre-trained models will be moved into (1) so that we can keep reproduction
 
-    # pretext = 'GraphCL' 
-    pretext = 'SimGRACE' 
+    pretext = 'GraphCL' 
+    # pretext = 'SimGRACE' 
     # gnn_type = 'TransformerConv'  
     # gnn_type = 'GAT'
     gnn_type = 'GCN'
