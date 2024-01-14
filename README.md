@@ -39,8 +39,7 @@ Please visit their [website](https://github.com/sheldonresearch/ProG) to inquire
 > <span style="color:blue"> Current experimental datasets: Cora/Citeseer/Pubmed/MUTAG</span>
 
 - [ ] Dataset:  support graph-level datasets, PROTEINS, IMDB-BINARY, REDDIT-BINARY, ENZYMES;
-- [ ] Evaluation: support large-scale dataset mini-batch evaluation, including Reddit, arXiv, and Flickr
-- [ ] Method: implementation of DGI
+- [ ] Pre_train: implementation of DGI, contextpred
 - [ ] Prompt: Gprompt(WWW23)
       
 ## Package Dependencies
