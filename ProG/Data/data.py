@@ -63,7 +63,7 @@ def multi_class_NIG(dataname, num_class,shots=100):
 
     return train_data, test_data, train_list,test_list
 
-def load_graph_task(dataset_name):
+def load_graph_task(dataset_name, num_parts=None):
     if dataset_name == 'MUTAG':
         dataset = TUDataset(root='data/TUDataset', name=(dataset_name))
 
@@ -109,13 +109,14 @@ def load_graph_task(dataset_name):
         edge_index = data.edge_index
         edge_index = to_undirected(edge_index)
         data = Data(x=x, edge_index=edge_index)
-        input_dim = data.x.shape[1]
+        input_dim = dataset.num_features
+        out_dim = dataset.num_classes
         
         graph_list = list(ClusterData(data=data, num_parts=num_parts))
         train_dataset = graph_list[:100]
         test_dataset = graph_list[100:]
 
-        return dataset, train_dataset, test_dataset 
+        return input_dim, out_dim, train_dataset, test_dataset, graph_list 
     
 def load_node_task(dataname):
     dataset = Planetoid(root='data/Planetoid', name=dataname, transform=NormalizeFeatures())
