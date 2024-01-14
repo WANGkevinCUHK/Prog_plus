@@ -7,6 +7,10 @@ from torch_geometric.data import Batch
 from collections import defaultdict
 from torch_geometric.datasets import TUDataset
 from torch_geometric.transforms import NormalizeFeatures
+from torch_geometric.utils import to_undirected
+from torch_geometric.loader.cluster import ClusterData
+from torch_geometric.data import Data
+
 def multi_class_NIG(dataname, num_class,shots=100):
     """
     NIG: node induced graphs
@@ -60,44 +64,61 @@ def multi_class_NIG(dataname, num_class,shots=100):
     return train_data, test_data, train_list,test_list
 
 def load_graph_task(dataset_name):
+    if dataset_name == 'MUTAG':
+        dataset = TUDataset(root='data/TUDataset', name=(dataset_name))
 
-    dataset = TUDataset(root='data/TUDataset', name=(dataset_name))
+        print()
+        print(f'Dataset: {dataset}:')
+        print('====================')
+        print(f'Number of graphs: {len(dataset)}')
+        print(f'Number of features: {dataset.num_features}')
+        print(f'Number of classes: {dataset.num_classes}')
 
-    print()
-    print(f'Dataset: {dataset}:')
-    print('====================')
-    print(f'Number of graphs: {len(dataset)}')
-    print(f'Number of features: {dataset.num_features}')
-    print(f'Number of classes: {dataset.num_classes}')
+        data = dataset[0]  # Get the first graph object.
 
-    data = dataset[0]  # Get the first graph object.
+        print()
+        print(data)
+        print('=============================================================')
 
-    print()
-    print(data)
-    print('=============================================================')
-
-    # Gather some statistics about the first graph.
-    print(f'Number of nodes: {data.num_nodes}')
-    print(f'Number of edges: {data.num_edges}')
-    print(f'Average node degree: {data.num_edges / data.num_nodes:.2f}')
-    print(f'Has isolated nodes: {data.has_isolated_nodes()}')
-    print(f'Has self-loops: {data.has_self_loops()}')
-    print(f'Is undirected: {data.is_undirected()}')
+        # Gather some statistics about the first graph.
+        print(f'Number of nodes: {data.num_nodes}')
+        print(f'Number of edges: {data.num_edges}')
+        print(f'Average node degree: {data.num_edges / data.num_nodes:.2f}')
+        print(f'Has isolated nodes: {data.has_isolated_nodes()}')
+        print(f'Has self-loops: {data.has_self_loops()}')
+        print(f'Is undirected: {data.is_undirected()}')
 
 
-    torch.manual_seed(12345)
-    dataset = dataset.shuffle()
+        torch.manual_seed(12345)
+        dataset = dataset.shuffle()
 
-    train_dataset = dataset[:150]
-    test_dataset = dataset[150:]
+        train_dataset = dataset[:100]
+        test_dataset = dataset[100:]
 
-    print(f'Number of training graphs: {len(train_dataset)}')
-    print(f'Number of test graphs: {len(test_dataset)}')
-     
-    return dataset, train_dataset, test_dataset 
+        print(f'Number of training graphs: {len(train_dataset)}')
+        print(f'Number of test graphs: {len(test_dataset)}')
+        
+        return dataset, train_dataset, test_dataset 
 
+    if dataset_name == 'Cora' or 'Citesser':
+        dataset = Planetoid(root='data/Planetoid', name=dataset_name, transform=NormalizeFeatures())
+        data = dataset[0]
+        num_parts=200
+
+        x = data.x.detach()
+        edge_index = data.edge_index
+        edge_index = to_undirected(edge_index)
+        data = Data(x=x, edge_index=edge_index)
+        input_dim = data.x.shape[1]
+        
+        graph_list = list(ClusterData(data=data, num_parts=num_parts))
+        train_dataset = graph_list[:100]
+        test_dataset = graph_list[100:]
+
+        return dataset, train_dataset, test_dataset 
+    
 def load_node_task(dataname):
-    dataset = Planetoid(root='data/Planetoid', name='Cora', transform=NormalizeFeatures())
+    dataset = Planetoid(root='data/Planetoid', name=dataname, transform=NormalizeFeatures())
 
     print()
     print(f'Dataset: {dataset}:')
