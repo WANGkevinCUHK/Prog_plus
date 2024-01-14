@@ -81,14 +81,14 @@ def test(model,loader, prompt, device):
 
 
 
-dataset_name = 'MUTAG'
+# dataset_name = 'MUTAG'
+dataset_name = 'Citeseer'
 dataset, train_dataset, test_dataset = load_graph_task(dataset_name)
 
 
 train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
-# Number of graphs in the current batch: 64
-# Batch(edge_attr=[2560, 4], edge_index=[2, 2560], x=[1154, 7], y=[64], batch=[1154], ptr=[65])
+
 print("prepare data is finished!")
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -97,7 +97,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 criterion = torch.nn.CrossEntropyLoss()
 
 # prompt_type ='ProG'
-prompt_type = 'gpf-plus'
+prompt_type = 'gpf'
 
 if prompt_type == 'None':
     prompt_type = None
