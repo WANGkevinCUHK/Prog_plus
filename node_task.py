@@ -4,25 +4,26 @@ import torch
 from ProG.prompt import GPF,GPF_plus
 from ProG.Data.data import load_node_task
 from ProG.utils import constraint
+from ProG.get_args import get_args
+
+
+args=get_args()
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-dataset_name ='CiteSeer'
-gnn_type = 'GCN'
-data, dataset = load_node_task(dataset_name)
+data, dataset = load_node_task(args.dataset_name)
 data = data.to(device)
 data.train_id = torch.nonzero(data.train_mask).squeeze(1)
-model = GNN(input_dim=dataset.num_features,out_dim=dataset.num_classes, gnn_type=gnn_type).to(device)
-pre_train_path = '/home/chenyizi/ZCY/data/Prog_plus/pre_trained_gnn/{}.GraphCL.{}.pth'.format(dataset_name, gnn_type)
+model = GNN(input_dim=dataset.num_features,out_dim=dataset.num_classes, gnn_type=args.gnn_type).to(device)
+pre_train_path = '/home/chenyizi/ZCY/data/Prog_plus/pre_trained_gnn/{}.GraphCL.{}.pth'.format(args.dataset_name, args.gnn_type)
 model.load_state_dict(torch.load(pre_train_path))
 print("successfully load pre-trained weights for gnn! @ {}".format(pre_train_path))
 
 # setting prompt
-prompt_type = 'gppt'
-if prompt_type == 'gpf':
+if args.prompt_type == 'gpf':
       prompt = GPF(data.num_features).to(device)
-elif prompt_type == 'gpf-plus':
+elif args.prompt_type == 'gpf-plus':
       prompt = GPF_plus(data.num_features,data.num_nodes ).to(device)
-elif prompt_type == 'gppt':
+elif args.prompt_type == 'gppt':
       model = GPPT(in_feats = dataset.num_features, n_classes= dataset.num_classes).to(device)
       model.weigth_init(data.x,data.edge_index,data.y,data.train_id)
 else:
@@ -34,7 +35,7 @@ criterion = torch.nn.CrossEntropyLoss()
 
 def train(model, data):
       # model.weigth_init(data.x,data.edge_index,data.y,data.train_id)
-      if prompt_type != 'gppt':
+      if args.prompt_type != 'gppt':
             model.train()
             optimizer.zero_grad() 
             out = model(data.x, data.edge_index, batch=None, prompt = prompt) 
@@ -57,7 +58,7 @@ def train(model, data):
 
 def test(model, data, mask):
       model.eval()
-      if prompt_type != 'gppt':
+      if args.prompt_type != 'gppt':
             out = model(data.x, data.edge_index, batch=None, prompt = prompt)
       else:
             out = model(data.x, data.edge_index)
