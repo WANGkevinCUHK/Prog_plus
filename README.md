@@ -36,7 +36,7 @@ Please visit their [website](https://github.com/sheldonresearch/ProG) to inquire
 ## TODO List
 
 > **Note**
-> <span style="color:blue"> Current experimental datasets: Cora/Citeseer/Pubmed/MUTAG</span>
+> <span style="color:blue"> Current experimental datasets: Node/Edge:Cora/Citeseer/Pubmed; Graph:MUTAG</span>
 
 - [ ] **Write a comprehensive usage document**
 - [ ] Dataset:  support graph-level datasets, PROTEINS, IMDB-BINARY, REDDIT-BINARY, ENZYMES; Add node-level datasets.
