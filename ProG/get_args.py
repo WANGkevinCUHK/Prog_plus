@@ -19,8 +19,8 @@ def get_pre_trained_args():
                         help='weight decay (default: 0)')
     parser.add_argument('--num_layer', type=int, default=5,
                         help='number of GNN message passing layers (default: 5).')
-    parser.add_argument('--emb_dim', type=int, default=300,
-                        help='embedding dimensions (default: 300)')
+    parser.add_argument('--num_parts', type=int, default=200,
+                        help='for clusterdata (default: 200)')
     parser.add_argument('--dropout_ratio', type=float, default=0,
                         help='dropout ratio (default: 0)')
     parser.add_argument('--JK', type=str, default="last",
