@@ -45,7 +45,7 @@ Please visit their [website](https://github.com/sheldonresearch/ProG) to inquire
 - [ ] induced graph
 - [ ] unify args
       
-## Package Dependencies
+## Environment Setup
 --cuda 11.8
 
 --python 3.9.17 
@@ -55,14 +55,14 @@ Please visit their [website](https://github.com/sheldonresearch/ProG) to inquire
 --torch-geometric 2.3.1
 [[quick start](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html )]
 
+```shell
+pip install torch_geometric
 
-``pip install torch_geometric``
-
-``pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.1.0+cu118.html # Optional dependencies``
+pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.1.0+cu118.html # Optional dependencies
 
 or 
-``conda install pyg -c pyg``
-
+conda install pyg -c pyg
+```
 ## Usage
 
 See in [https://github.com/sheldonresearch/ProG](https://github.com/sheldonresearch/ProG)
