@@ -60,9 +60,8 @@ pip install torch_geometric
 
 pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.1.0+cu118.html # Optional dependencies
 
-or run this command
 ```
-
+or run this command
 ```shell
 conda install pyg -c pyg
 ```
