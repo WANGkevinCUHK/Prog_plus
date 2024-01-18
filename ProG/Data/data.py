@@ -2,7 +2,7 @@ import torch
 import pickle as pk
 from random import shuffle
 
-from torch_geometric.datasets import Planetoid
+from torch_geometric.datasets import Planetoid, amazon, Reddit, WikiCS
 from torch_geometric.data import Batch
 from collections import defaultdict
 from torch_geometric.datasets import TUDataset
@@ -64,7 +64,7 @@ def multi_class_NIG(dataname, num_class,shots=100):
     return train_data, test_data, train_list,test_list
 
 def load_graph_task(dataset_name, num_parts=None):
-    if dataset_name == 'MUTAG':
+    if dataset_name == 'MUTAG' or 'ENZYMES' or 'COLLAB' or 'PROTEINS' or 'IMDB-BINARY'or 'REDDIT-BINARY':
         dataset = TUDataset(root='data/TUDataset', name=(dataset_name))
 
         print()
@@ -119,8 +119,14 @@ def load_graph_task(dataset_name, num_parts=None):
         return input_dim, out_dim, train_dataset, test_dataset, graph_list 
     
 def load_node_task(dataname):
-    dataset = Planetoid(root='data/Planetoid', name=dataname, transform=NormalizeFeatures())
-
+    if dataname == 'PubMed' or 'CiteSeer' or 'Cora':
+        dataset = Planetoid(root='data/Planetoid', name=dataname, transform=NormalizeFeatures())
+    if dataname == 'Computers' or 'Photo':
+        dataset = amazon(root='data/amazon', name=dataname, transform=NormalizeFeatures())
+    if dataname == 'Reddit':
+        dataset = Reddit(root='data/Reddit', transform=NormalizeFeatures())
+    if dataname == 'WikiCS':
+        dataset = WikiCS(root='data/WikiCS', transform=NormalizeFeatures())   
     print()
     print(f'Dataset: {dataset}:')
     print('======================')
