@@ -79,50 +79,49 @@ def test(model,loader, prompt, device):
     return correct / len(loader.dataset)  # Derive ratio of correct predictions.
 
 
-
-args = get_graph_task_args()
-dataset, train_dataset, test_dataset = load_graph_task(args.dataset_name)
-
-
-train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
-
-print("prepare data is finished!")
-
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = GNN(input_dim=dataset.num_features,out_dim=dataset.num_classes, gnn_type = args.gnn_type).to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-criterion = torch.nn.CrossEntropyLoss()
-
-if args.prompt_type == 'None':
-    prompt_type = None
-elif args.prompt_type =='ProG':
-    lr, wd = 0.001, 0.00001
-    prompt = LightPrompt(token_dim=dataset.num_features, token_num_per_group=100, group_num=dataset.num_classes, inner_prune=0.01)
-    for p in model.parameters():
-        p.requires_grad = False
-    opi = optim.Adam(filter(lambda p: p.requires_grad, prompt.parameters()),lr=lr, weight_decay=wd)
-elif args.prompt_type == 'gpf':
-    prompt = GPF(dataset.num_features).to(device)
-elif args.prompt_type == 'gpf-plus':
-    prompt = GPF_plus(dataset.num_features,dataset.num_nodes).to(device)
-else:
-    raise KeyError(" We don't support this kind of prompt.")
+if __name__ == '__main__':
+    args = get_graph_task_args()
+    dataset, train_dataset, test_dataset = load_graph_task(args.dataset_name)
 
 
-if prompt_type == 'ProG':
-    prompt_epoch = 200
-    for j in range(1, prompt_epoch + 1):
-        prompt_train(prompt, train_loader, model, opi, device, epoch = j, prompt_epoch = prompt_epoch)
-        acc_f1_over_batches(test_loader, prompt, model, dataset.num_classes, device)
+    train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
-else:
-   
-    for i in range(1, args.epochs +1):
-        train(model, train_loader, prompt = prompt, device = device)
-        train_acc = test(model, train_loader, prompt = prompt, device = device)
-        test_acc = test(model, test_loader, prompt = prompt, device = device)
-        print(f'Epoch: {i:03d}, Train Acc: {train_acc:.4f}, Test Acc: {test_acc:.4f}') 
+    print("prepare data is finished!")
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = GNN(input_dim=dataset.num_features,out_dim=dataset.num_classes, gnn_type = args.gnn_type).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    criterion = torch.nn.CrossEntropyLoss()
+
+    if args.prompt_type == 'None':
+        prompt_type = None
+    elif args.prompt_type =='ProG':
+        lr, wd = 0.001, 0.00001
+        prompt = LightPrompt(token_dim=dataset.num_features, token_num_per_group=100, group_num=dataset.num_classes, inner_prune=0.01)
+        for p in model.parameters():
+            p.requires_grad = False
+        opi = optim.Adam(filter(lambda p: p.requires_grad, prompt.parameters()),lr=lr, weight_decay=wd)
+    elif args.prompt_type == 'gpf':
+        prompt = GPF(dataset.num_features).to(device)
+    elif args.prompt_type == 'gpf-plus':
+        prompt = GPF_plus(dataset.num_features,dataset.num_nodes).to(device)
+    else:
+        raise KeyError(" We don't support this kind of prompt.")
+
+
+    if prompt_type == 'ProG':
+        prompt_epoch = 200
+        for j in range(1, prompt_epoch + 1):
+            prompt_train(prompt, train_loader, model, opi, device, epoch = j, prompt_epoch = prompt_epoch)
+            acc_f1_over_batches(test_loader, prompt, model, dataset.num_classes, device)
+
+    else:
+        for i in range(1, args.epochs +1):
+            train(model, train_loader, prompt = prompt, device = device)
+            train_acc = test(model, train_loader, prompt = prompt, device = device)
+            test_acc = test(model, test_loader, prompt = prompt, device = device)
+            print(f'Epoch: {i:03d}, Train Acc: {train_acc:.4f}, Test Acc: {test_acc:.4f}') 
         
 
         

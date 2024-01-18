@@ -1,4 +1,3 @@
-
 from ProG.Model.model import GNN, GPPT
 import torch
 from ProG.prompt import GPF,GPF_plus
@@ -12,11 +11,12 @@ def train(model, data):
             model.train()
             optimizer.zero_grad() 
             out = model(data.x, data.edge_index, batch=None, prompt = prompt) 
-            loss = criterion(out[data.train_mask], data.y[data.train_mask])  
+            loss = criterion(out[data.train_mask], data.y[data.train_mask])  #这里只用了train_mask的标签
             loss.backward()  
             optimizer.step()  
             return loss
       else:
+      # if args.prompt_type is gppt prompt
             model.train()
             out = model(data.x, data.edge_index)
             loss = criterion(out[data.train_mask], data.y[data.train_mask])
@@ -33,11 +33,13 @@ def test(model, data, mask):
       if args.prompt_type != 'gppt':
             out = model(data.x, data.edge_index, batch=None, prompt = prompt)
       else:
+      # if args.prompt_type is gppt prompt
             out = model(data.x, data.edge_index)
       pred = out.argmax(dim=1)  
       correct = pred[mask] == data.y[mask]  
       acc = int(correct.sum()) / int(mask.sum())  
       return acc
+
 if __name__ == '__main__':
       args=get_node_task_args()
 

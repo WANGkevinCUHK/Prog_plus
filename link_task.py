@@ -1,40 +1,10 @@
 import os.path as osp
-
 import torch
 from sklearn.metrics import roc_auc_score
-
 import torch_geometric.transforms as T
 from torch_geometric.datasets import Planetoid
-from torch_geometric.nn import GCNConv
 from torch_geometric.utils import negative_sampling
 from ProG.Model.model import GNN
-
-if torch.cuda.is_available():
-    device = torch.device('cuda')
-else:
-    device = torch.device('cpu')
-
-transform = T.Compose([
-    T.NormalizeFeatures(),
-    T.ToDevice(device),
-    T.RandomLinkSplit(num_val=0.05, num_test=0.1, is_undirected=True,
-                      add_negative_train_samples=False),
-])
-path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', 'Planetoid')
-dataset = Planetoid(path, name='Cora', transform=transform)
-# After applying the `RandomLinkSplit` transform, the data is transformed from
-# a data object to a list of tuples (train_data, val_data, test_data), with
-# each element representing the corresponding split.
-train_data, val_data, test_data = dataset[0]
-
-
-
-
-model = GNN(input_dim=dataset.num_features,out_dim=dataset.num_classes, gnn_type='GCN').to(device)
-# model = Net(dataset.num_features, 128, 64).to(device)
-optimizer = torch.optim.Adam(params=model.parameters(), lr=0.01)
-criterion = torch.nn.BCEWithLogitsLoss()
-
 
 def train():
     model.train()
@@ -70,18 +40,38 @@ def test(data):
     return roc_auc_score(data.edge_label.cpu().numpy(), out.cpu().numpy())
 
 
-best_val_auc = final_test_auc = 0
-for epoch in range(1, 101):
-    loss = train()
-    val_auc = test(val_data)
-    test_auc = test(test_data)
-    if val_auc > best_val_auc:
-        best_val_auc = val_auc
-        final_test_auc = test_auc
-    print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Val: {val_auc:.4f}, '
-          f'Test: {test_auc:.4f}')
+if __name__ == '__main__':
+    device = torch.device('cuda:7' if torch.cuda.is_available() else 'cpu')
 
-print(f'Final Test: {final_test_auc:.4f}')
+    transform = T.Compose([
+        T.NormalizeFeatures(),
+        T.ToDevice(device),
+        T.RandomLinkSplit(num_val=0.05, num_test=0.1, is_undirected=True,
+                        add_negative_train_samples=False),
+    ])
+    path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', 'Planetoid')
+    dataset = Planetoid(path, name='Cora', transform=transform)
+    # After applying the `RandomLinkSplit` transform, the data is transformed from
+    # a data object to a list of tuples (train_data, val_data, test_data), with
+    # each element representing the corresponding split.
+    train_data, val_data, test_data = dataset[0]
 
-z = model(test_data.x, test_data.edge_index)
-final_edge_index = model.decode_all(z)
+    model = GNN(input_dim=dataset.num_features,out_dim=dataset.num_classes, gnn_type='GCN').to(device)
+    optimizer = torch.optim.Adam(params=model.parameters(), lr=0.01)
+    criterion = torch.nn.BCEWithLogitsLoss()
+
+    best_val_auc = final_test_auc = 0
+    for epoch in range(1, 101):
+        loss = train()
+        val_auc = test(val_data)
+        test_auc = test(test_data)
+        if val_auc > best_val_auc:
+            best_val_auc = val_auc
+            final_test_auc = test_auc
+        print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Val: {val_auc:.4f}, '
+            f'Test: {test_auc:.4f}')
+
+    print(f'Final Test: {final_test_auc:.4f}')
+
+    z = model(test_data.x, test_data.edge_index)
+    final_edge_index = model.decode_all(z)
