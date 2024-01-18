@@ -5,7 +5,7 @@ from ProG.Model.model import GNN
 from ProG.prompt import GPF,GPF_plus,LightPrompt
 from torch import nn, optim
 from ProG.Data.data import load_graph_task
-
+from ProG.get_args import get_graph_task_args
 
 def prompt_train(PG, train_loader, model, opi_pg, device, epoch, prompt_epoch):
     
@@ -80,10 +80,8 @@ def test(model,loader, prompt, device):
 
 
 
-
-# dataset_name = 'MUTAG'
-dataset_name = 'Citeseer'
-dataset, train_dataset, test_dataset = load_graph_task(dataset_name)
+args = get_graph_task_args()
+dataset, train_dataset, test_dataset = load_graph_task(args.dataset_name)
 
 
 train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
@@ -92,24 +90,21 @@ test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
 print("prepare data is finished!")
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = GNN(input_dim=dataset.num_features,out_dim=dataset.num_classes, gnn_type='GraphSage').to(device)
+model = GNN(input_dim=dataset.num_features,out_dim=dataset.num_classes, gnn_type = args.gnn_type).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 criterion = torch.nn.CrossEntropyLoss()
 
-# prompt_type ='ProG'
-prompt_type = 'gpf'
-
-if prompt_type == 'None':
+if args.prompt_type == 'None':
     prompt_type = None
-elif prompt_type =='ProG':
+elif args.prompt_type =='ProG':
     lr, wd = 0.001, 0.00001
     prompt = LightPrompt(token_dim=dataset.num_features, token_num_per_group=100, group_num=dataset.num_classes, inner_prune=0.01)
     for p in model.parameters():
         p.requires_grad = False
     opi = optim.Adam(filter(lambda p: p.requires_grad, prompt.parameters()),lr=lr, weight_decay=wd)
-elif prompt_type == 'gpf':
+elif args.prompt_type == 'gpf':
     prompt = GPF(dataset.num_features).to(device)
-elif prompt_type == 'gpf-plus':
+elif args.prompt_type == 'gpf-plus':
     prompt = GPF_plus(dataset.num_features,dataset.num_nodes).to(device)
 else:
     raise KeyError(" We don't support this kind of prompt.")
@@ -122,8 +117,8 @@ if prompt_type == 'ProG':
         acc_f1_over_batches(test_loader, prompt, model, dataset.num_classes, device)
 
 else:
-    epoch=100
-    for i in range(1, epoch +1):
+   
+    for i in range(1, args.epochs +1):
         train(model, train_loader, prompt = prompt, device = device)
         train_acc = test(model, train_loader, prompt = prompt, device = device)
         test_acc = test(model, test_loader, prompt = prompt, device = device)
