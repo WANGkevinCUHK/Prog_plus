@@ -73,5 +73,5 @@ if __name__ == '__main__':
 
     print(f'Final Test: {final_test_auc:.4f}')
 
-    z = model(test_data.x, test_data.edge_index)
-    final_edge_index = model.decode_all(z)
+    # z = model(test_data.x, test_data.edge_index)
+    # final_edge_index = model.decode_all(z)

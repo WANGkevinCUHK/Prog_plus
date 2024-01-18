@@ -70,10 +70,14 @@ if __name__ == '__main__':
 
       optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=5e-4)
       criterion = torch.nn.CrossEntropyLoss()
-
+      best_val_acc = final_test_acc = 0
       for epoch in range(1, args.epochs):
             data = data.to(device)
             loss = train(model,data)
             val_acc = test(model,data,data.val_mask)
             test_acc = test(model,data,data.test_mask)
+            if val_acc > best_val_acc:
+                  best_val_acc = val_acc
+                  final_test_acc = test_acc
             print("Epoch {:03d} | Loss {:.4f} | val Accuracy {:.4f} | test Accuracy {:.4f} ".format(epoch, loss.item(), val_acc, test_acc))
+      print(f'Final Test: {final_test_acc:.4f}')
