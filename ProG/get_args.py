@@ -36,7 +36,7 @@ def get_node_task_args():
     parser = argparse.ArgumentParser(description='PyTorch implementation of pre-training of graph neural networks')
     parser.add_argument('--dataset_name', type=str, default='CiteSeer',
                         help='dataset_name can be CiteSeer, Cora , PubMed, PubMed')
-    parser.add_argument('--prompt_type', type=str, default='gpf',
+    parser.add_argument('--prompt_type', type=str, default='None',
                         help='prompt_type can be gpf, gpf_plus,gppt')
     parser.add_argument('--device', type=int, default=0,
                         help='which gpu to use if any (default: 0)')
@@ -56,7 +56,7 @@ def get_node_task_args():
                         help='dropout ratio (default: 0)')
     parser.add_argument('--JK', type=str, default="last",
                         help='how the node features across layers are combined. last, sum, max or concat')
-    parser.add_argument('--gnn_type', type=str, default="GAT")
+    parser.add_argument('--gnn_type', type=str, default="GCN")
     parser.add_argument('--model_file', type = str, default = '', help='filename to output the pre-trained model')
     parser.add_argument('--num_workers', type=int, default = 12, help='number of workers for dataset loading')
     args = parser.parse_args()

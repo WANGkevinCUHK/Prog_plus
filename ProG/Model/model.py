@@ -93,7 +93,8 @@ class GNN(torch.nn.Module):
             GraphConv = GConv
         # The graph neural network operator from the "Weisfeiler and Leman Go Neural: Higher-order Graph Neural Networks" paper.
         elif gnn_type == 'GIN':
-            GraphConv = GINConv
+            GraphConv = lambda i, h: GINConv(nn.Sequential(nn.Linear(i, h), nn.ReLU(), nn.Linear(h, h))
+        )
         else:
             raise KeyError('gnn_type can be only GAT, GCN, GraphSage, GConv and TransformerConv')
 
